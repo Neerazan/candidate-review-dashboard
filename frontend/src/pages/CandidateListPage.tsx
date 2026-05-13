@@ -133,7 +133,7 @@ export function CandidateListPage() {
         </div>
         <CandidateFilters value={filters} onChange={setFilters} includeArchivedOption={includeArchivedOption} />
         {error ? <ErrorState message={error} /> : null}
-        {loading ? <LoadingState label="Loading candidates..." /> : null}
+        {loading ? <LoadingState label="Loading candidates..." variant="list" /> : null}
         {!loading && data && user ? <CandidateTable items={data.items} viewerRole={user.role} /> : null}
         {data ? (
           <div className="card flex items-center justify-between p-3 text-sm">

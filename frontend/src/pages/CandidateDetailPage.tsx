@@ -236,7 +236,7 @@ export function CandidateDetailPage() {
         </div>
 
         {error ? <ErrorState message={error} /> : null}
-        {loading ? <LoadingState label="Loading candidate details..." /> : null}
+        {loading ? <LoadingState label="Loading candidate details..." variant="detail" /> : null}
 
         {!loading && candidate ? (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
