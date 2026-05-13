@@ -4,6 +4,12 @@ interface RequestOptions extends RequestInit {
   query?: Record<string, string | number | undefined>
 }
 
+let refreshPromise: Promise<boolean> | null = null
+
+function notifySessionExpired(): void {
+  window.dispatchEvent(new Event('auth:session-expired'))
+}
+
 function buildUrl(path: string, query?: RequestOptions['query']): string {
   const url = new URL(path, API_BASE_URL)
   if (query) {
@@ -17,18 +23,7 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers = new Headers(options.headers)
-  if (!headers.has('Content-Type') && options.body) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  const response = await fetch(buildUrl(path, options.query), {
-    ...options,
-    credentials: 'include',
-    headers,
-  })
-
-  if (!response.ok) {
+  async function parseError(response: Response): Promise<Error> {
     let message = 'Request failed'
     try {
       const payload = (await response.json()) as { detail?: string }
@@ -38,7 +33,53 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     } catch {
       message = response.statusText || message
     }
-    throw new Error(message)
+    return new Error(message)
+  }
+
+  async function refreshAccessToken(): Promise<boolean> {
+    if (!refreshPromise) {
+      refreshPromise = (async () => {
+        const response = await fetch(buildUrl('/auth/refresh'), {
+          method: 'POST',
+          credentials: 'include',
+        })
+        return response.ok
+      })()
+      refreshPromise.finally(() => {
+        refreshPromise = null
+      })
+    }
+    return refreshPromise
+  }
+
+  async function requestWithRetry(retryOnAuthFailure: boolean): Promise<Response> {
+    const headers = new Headers(options.headers)
+    if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json')
+    }
+
+    const response = await fetch(buildUrl(path, options.query), {
+      ...options,
+      credentials: 'include',
+      headers,
+    })
+
+    const canRefresh = retryOnAuthFailure && response.status === 401 && path !== '/auth/refresh'
+    if (canRefresh) {
+      const refreshed = await refreshAccessToken()
+      if (refreshed) {
+        return requestWithRetry(false)
+      }
+      notifySessionExpired()
+    }
+
+    return response
+  }
+
+  const response = await requestWithRetry(true)
+
+  if (!response.ok) {
+    throw await parseError(response)
   }
 
   if (response.status === 204) {

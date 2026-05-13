@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { user, login } = useAuth()
+  const { user, login, sessionExpired, clearSessionExpired } = useAuth()
   const [email, setEmail] = useState('admin@techkraft.local')
   const [password, setPassword] = useState('password123')
   const [loading, setLoading] = useState(false)
@@ -15,6 +15,14 @@ export function LoginPage() {
   if (user) {
     return <Navigate to="/candidates" replace />
   }
+
+  useEffect(() => {
+    return () => {
+      if (sessionExpired) {
+        clearSessionExpired()
+      }
+    }
+  }, [clearSessionExpired, sessionExpired])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,6 +43,11 @@ export function LoginPage() {
       <form className="card w-full p-6" onSubmit={handleSubmit}>
         <h1 className="text-2xl font-extrabold">Candidate Review Dashboard</h1>
         <p className="mt-1 text-sm text-ng-ghost">Sign in to continue</p>
+        {sessionExpired ? (
+          <div className="mt-3 rounded-lg border border-ng-line bg-ng-surface px-3 py-2 text-sm text-ng-muted">
+            Your session expired. Please sign in again.
+          </div>
+        ) : null}
         <div className="mt-5 space-y-3">
           <div>
             <label className="label">Email</label>
