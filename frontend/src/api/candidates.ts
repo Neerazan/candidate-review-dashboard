@@ -1,4 +1,4 @@
-import { apiRequest } from './client'
+import { API_BASE_URL, apiRequest } from './client'
 import type {
   CandidateDetail,
   CandidateDetailAdmin,
@@ -81,4 +81,41 @@ export function updateCandidateStatus(
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
+}
+
+export interface CandidateScoreStreamEvent {
+  candidate_id: string
+  action: 'created' | 'updated' | 'deleted' | string
+  score_id: string
+  updated_at: string
+}
+
+interface StreamCallbacks {
+  onScoreUpdated: (payload: CandidateScoreStreamEvent) => void
+  onOpen?: () => void
+  onError?: () => void
+}
+
+export function streamCandidateEvents(candidateId: string, callbacks: StreamCallbacks): EventSource {
+  const streamUrl = new URL(`/candidates/${candidateId}/stream`, API_BASE_URL)
+  const source = new EventSource(streamUrl.toString(), { withCredentials: true })
+
+  source.addEventListener('score_updated', (event) => {
+    try {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as CandidateScoreStreamEvent
+      callbacks.onScoreUpdated(payload)
+    } catch {
+      // Ignore malformed event payloads.
+    }
+  })
+
+  source.onopen = () => {
+    callbacks.onOpen?.()
+  }
+
+  source.onerror = () => {
+    callbacks.onError?.()
+  }
+
+  return source
 }

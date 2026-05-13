@@ -1,6 +1,9 @@
 from typing import Union
+import asyncio
+from queue import Empty
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -40,8 +43,47 @@ from app.services.candidate_service import (
     update_internal_notes,
     update_score,
 )
+from app.services.realtime_service import candidate_event_bus
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
+
+
+@router.get("/{candidate_id}/stream")
+async def stream_candidate_events(
+    candidate_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        candidate = get_candidate_or_404(db, candidate_id)
+    except CandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if current_user.role == UserRole.REVIEWER.value and candidate.status == "archived":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    channel = candidate_event_bus.subscribe(candidate_id)
+
+    async def event_stream():
+        try:
+            while True:
+                try:
+                    message = await asyncio.to_thread(channel.get, True, 20)
+                    yield message
+                except Empty:
+                    yield ": keepalive\n\n"
+        finally:
+            candidate_event_bus.unsubscribe(candidate_id, channel)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("", response_model=CandidateListResponse)

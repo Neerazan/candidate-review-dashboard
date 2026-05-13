@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
     archiveCandidate,
@@ -8,6 +8,7 @@ import {
     generateSummary,
     getCandidate,
     getInternalNotes,
+    streamCandidateEvents,
     updateCandidateStatus,
     updateInternalNotes,
     updateScore,
@@ -32,6 +33,41 @@ function isAdminDetail(candidate: CandidateDetail | CandidateDetailAdmin): candi
   return 'internal_notes' in candidate
 }
 
+function scoresSignature(candidate: CandidateDetail | CandidateDetailAdmin): string {
+  return candidate.scores
+    .map((score) => `${score.id}:${score.score}:${score.note ?? ''}:${score.category}:${score.created_at}`)
+    .join('|')
+}
+
+function hasCandidateChanged(
+  previous: CandidateDetail | CandidateDetailAdmin | null,
+  next: CandidateDetail | CandidateDetailAdmin,
+): boolean {
+  if (!previous) {
+    return true
+  }
+
+  if (
+    previous.status !== next.status ||
+    previous.ai_summary !== next.ai_summary ||
+    previous.updated_at !== next.updated_at ||
+    previous.experience_summary !== next.experience_summary ||
+    previous.resume_url !== next.resume_url
+  ) {
+    return true
+  }
+
+  if (scoresSignature(previous) !== scoresSignature(next)) {
+    return true
+  }
+
+  if (isAdminDetail(previous) && isAdminDetail(next) && previous.internal_notes !== next.internal_notes) {
+    return true
+  }
+
+  return false
+}
+
 export function CandidateDetailPage() {
   const { candidateId = '' } = useParams()
   const navigate = useNavigate()
@@ -44,6 +80,9 @@ export function CandidateDetailPage() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [editingScoreId, setEditingScoreId] = useState<string | null>(null)
   const [statusDraft, setStatusDraft] = useState('')
+  const [liveStatus, setLiveStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const refreshTimeoutRef = useRef<number | null>(null)
+  const hasLoadedCandidateRef = useRef(false)
 
   const isAdmin = user?.role === 'admin'
   const reviewerStatusLocked = ['archived', 'hired', 'rejected'].includes(candidate?.status ?? '')
@@ -53,35 +92,87 @@ export function CandidateDetailPage() {
     [user?.role, reviewerStatusLocked],
   )
 
-  async function fetchCandidate() {
+  const fetchCandidate = useCallback(async (options?: { silent?: boolean }) => {
     if (!candidateId) {
       return
     }
-    setLoading(true)
-    setError(null)
+    const silent = options?.silent ?? false
+    if (!silent && !hasLoadedCandidateRef.current) {
+      setLoading(true)
+    }
+    if (error) {
+      setError(null)
+    }
     try {
       const detail = await getCandidate(candidateId)
-      setCandidate(detail)
-      if (isAdmin) {
+      setCandidate((previous) => (hasCandidateChanged(previous, detail) ? detail : previous))
+      hasLoadedCandidateRef.current = true
+      if (isAdmin && !silent) {
         const notesResponse = await getInternalNotes(candidateId)
-        setNotes(notesResponse.internal_notes)
+        setNotes((previous) => (previous === notesResponse.internal_notes ? previous : notesResponse.internal_notes))
+      } else if (isAdminDetail(detail)) {
+        setNotes((previous) => (previous === detail.internal_notes ? previous : detail.internal_notes))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load candidate')
     } finally {
-      setLoading(false)
+      if (!silent || !hasLoadedCandidateRef.current) {
+        setLoading(false)
+      }
     }
-  }
+  }, [candidateId, error, isAdmin])
+
+  useEffect(() => {
+    hasLoadedCandidateRef.current = false
+    setCandidate(null)
+    setLoading(true)
+  }, [candidateId])
 
   useEffect(() => {
     void fetchCandidate()
-  }, [candidateId, isAdmin])
+  }, [fetchCandidate])
 
   useEffect(() => {
-    if (candidate) {
+    if (candidate && candidate.status !== statusDraft) {
       setStatusDraft(candidate.status)
     }
-  }, [candidate])
+  }, [candidate, statusDraft])
+
+  useEffect(() => {
+    if (!candidateId) {
+      return
+    }
+
+    const triggerRefresh = () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current)
+      }
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        void fetchCandidate({ silent: true })
+      }, 350)
+    }
+
+    setLiveStatus('connecting')
+    const source = streamCandidateEvents(candidateId, {
+      onScoreUpdated: () => {
+        triggerRefresh()
+      },
+      onOpen: () => {
+        setLiveStatus('connected')
+      },
+      onError: () => {
+        setLiveStatus('disconnected')
+      },
+    })
+
+    return () => {
+      source.close()
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current)
+        refreshTimeoutRef.current = null
+      }
+    }
+  }, [candidateId, isAdmin, fetchCandidate])
 
   async function handleCreateScore(payload: ScoreCreatePayload) {
     await createScore(candidateId, payload)
@@ -249,6 +340,12 @@ export function CandidateDetailPage() {
                       <h1 className="text-2xl font-extrabold">{candidate.name}</h1>
                       <p className="text-sm text-ng-muted">{candidate.email}</p>
                       <p className="mt-2 text-sm text-ng-muted">Role: {candidate.role_applied}</p>
+                      <p className="mt-2 text-xs font-medium text-ng-muted">
+                        Live updates:{' '}
+                        <span className={liveStatus === 'connected' ? 'text-ng-blue' : 'text-ng-muted'}>
+                          {liveStatus}
+                        </span>
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

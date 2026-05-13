@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import Candidate, Score, User, UserRole
 from app.schemas import CandidateListItem, ScoreCreate, ScoreUpdate
+from app.services.realtime_service import candidate_event_bus
 
 
 class CandidateServiceError(Exception):
@@ -146,6 +147,7 @@ def create_score(*, db: Session, candidate_id: str, reviewer: User, payload: Sco
         raise DuplicateScoreError("Score already exists for this category") from exc
 
     db.refresh(score)
+    candidate_event_bus.publish_score_event(candidate_id=candidate_id, action="created", score_id=score.id)
     return score
 
 
@@ -179,6 +181,7 @@ def update_score(
 
     db.commit()
     db.refresh(score)
+    candidate_event_bus.publish_score_event(candidate_id=candidate_id, action="updated", score_id=score.id)
     return score
 
 
@@ -193,8 +196,10 @@ def delete_score(*, db: Session, candidate_id: str, score_id: str, actor: User) 
     if score.reviewer_id != actor.id:
         raise PermissionDeniedError("You can only delete your own scores")
 
+    deleted_score_id = score.id
     db.delete(score)
     db.commit()
+    candidate_event_bus.publish_score_event(candidate_id=candidate_id, action="deleted", score_id=deleted_score_id)
 
 
 def soft_delete_candidate(*, db: Session, candidate_id: str, actor: User) -> Candidate:
