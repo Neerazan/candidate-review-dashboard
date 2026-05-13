@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth import hash_password
 from app.database import Base, SessionLocal, engine
 from app.config import settings
-from app.models import Candidate, User
+from app.models import Candidate, User, UserRole
 
 
 def seed_users(db: Session) -> None:
@@ -18,13 +18,19 @@ def seed_users(db: Session) -> None:
             "name": "System Admin",
             "email": "admin@techkraft.local",
             "password": "password123",
-            "role": "admin",
+            "role": UserRole.ADMIN.value,
         },
         {
             "name": "Primary Reviewer",
             "email": "reviewer@techkraft.local",
             "password": "password123",
-            "role": "reviewer",
+            "role": UserRole.REVIEWER.value,
+        },
+        {
+            "name": "Second Reviewer",
+            "email": "reviewer2@techkraft.local",
+            "password": "password123",
+            "role": UserRole.REVIEWER.value,
         },
     ]
 

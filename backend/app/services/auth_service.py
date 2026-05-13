@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from app.auth import (
     hash_token,
     verify_password,
 )
-from app.models import RefreshToken, User
+from app.models import RefreshToken, User, UserRole
 
 
 class AuthServiceError(Exception):
@@ -43,8 +43,12 @@ class AuthSession:
     refresh_token: str
 
 
+def _utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def register_reviewer(*, db: Session, actor: User, name: str, email: str, password: str) -> User:
-    if actor.role != "admin":
+    if actor.role != UserRole.ADMIN.value:
         raise ForbiddenActionError("Admin access required")
 
     existing_user = db.scalar(select(User).where(User.email == email))
@@ -55,7 +59,7 @@ def register_reviewer(*, db: Session, actor: User, name: str, email: str, passwo
         name=name,
         email=email,
         hashed_password=hash_password(password),
-        role="reviewer",
+        role=UserRole.REVIEWER.value,
     )
     db.add(user)
     db.commit()
@@ -93,7 +97,7 @@ def refresh_session(*, db: Session, refresh_token: str) -> AuthSession:
     if stored_token.revoked_at is not None:
         raise RefreshTokenError("Refresh token revoked")
 
-    if stored_token.expires_at <= datetime.utcnow():
+    if stored_token.expires_at <= _utcnow_naive():
         raise RefreshTokenError("Refresh token expired")
 
     if stored_token.jti != payload.get("jti"):
@@ -103,7 +107,7 @@ def refresh_session(*, db: Session, refresh_token: str) -> AuthSession:
     if not user:
         raise RefreshTokenError("User not found")
 
-    stored_token.revoked_at = datetime.utcnow()
+    stored_token.revoked_at = _utcnow_naive()
 
     new_access_token = create_access_token(user)
     new_refresh_token, new_jti, new_expires_at = create_refresh_token(user)
@@ -126,7 +130,7 @@ def logout(*, db: Session, refresh_token: str | None) -> None:
 
     stored_token = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == hash_token(refresh_token)))
     if stored_token and not stored_token.revoked_at:
-        stored_token.revoked_at = datetime.utcnow()
+        stored_token.revoked_at = _utcnow_naive()
         db.commit()
 
 

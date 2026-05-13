@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
+from enum import Enum
 from typing import Optional
 
 from sqlalchemy import (
@@ -22,17 +23,21 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
+def utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow_naive,
         nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         nullable=False,
     )
 
@@ -43,6 +48,11 @@ class UUIDMixin:
         primary_key=True,
         default=generate_uuid,
     )
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    REVIEWER = "reviewer"
 
 
 class User(Base, UUIDMixin, TimestampMixin):
@@ -62,7 +72,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     role: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default="reviewer",
+        default=UserRole.REVIEWER.value,
     )
 
     scores: Mapped[list["Score"]] = relationship(back_populates="reviewer")
