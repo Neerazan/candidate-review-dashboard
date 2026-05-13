@@ -1,1 +1,28 @@
 .env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+backend/.venv/
+
+# Frontend
+node_modules/
+frontend/node_modules/
+dist/
+
+# Local databases and runtime data
+backend/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

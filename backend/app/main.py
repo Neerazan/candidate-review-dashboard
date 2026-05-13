@@ -1,7 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Candidate Review API")
+from app.seed import seed_database
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    seed_database()
+    yield
+
+app = FastAPI(title="Candidate Review API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
