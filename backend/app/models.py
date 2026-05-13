@@ -12,7 +12,7 @@ from sqlalchemy import (
     JSON,
     String,
     Text,
-    UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +74,10 @@ class User(Base, UUIDMixin, TimestampMixin):
         nullable=False,
         default=UserRole.REVIEWER.value,
     )
+
+    active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     scores: Mapped[list["Score"]] = relationship(back_populates="reviewer")
 
@@ -151,6 +155,8 @@ class Score(Base, UUIDMixin, TimestampMixin):
 
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     candidate: Mapped["Candidate"] = relationship(back_populates="scores")
 
     reviewer: Mapped["User"] = relationship(back_populates="scores")
@@ -160,11 +166,13 @@ class Score(Base, UUIDMixin, TimestampMixin):
             "score >= 1 AND score <= 5",
             name="check_score_range",
         ),
-        UniqueConstraint(
+        Index(
+            "idx_unique_active_candidate_reviewer_category",
             "candidate_id",
             "reviewer_id",
             "category",
-            name="unique_candidate_reviewer_category",
+            unique=True,
+            sqlite_where=text("deleted_at IS NULL"),
         ),
         Index("idx_scores_candidate_id", "candidate_id"),
     )

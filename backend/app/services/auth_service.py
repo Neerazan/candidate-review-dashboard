@@ -14,7 +14,7 @@ from app.auth import (
     hash_token,
     verify_password,
 )
-from app.models import RefreshToken, User, UserRole
+from app.models import RefreshToken, Score, User, UserRole
 
 
 class AuthServiceError(Exception):
@@ -34,6 +34,18 @@ class InvalidCredentialsError(AuthServiceError):
 
 
 class RefreshTokenError(AuthServiceError):
+    pass
+
+
+class InactiveAccountError(AuthServiceError):
+    pass
+
+
+class UserNotFoundError(AuthServiceError):
+    pass
+
+
+class PasswordMismatchError(AuthServiceError):
     pass
 
 
@@ -71,6 +83,8 @@ def login(*, db: Session, email: str, password: str) -> AuthSession:
     user = db.scalar(select(User).where(User.email == email))
     if not user or not verify_password(password, user.hashed_password):
         raise InvalidCredentialsError("Invalid email or password")
+    if user.deleted_at is not None or not user.active:
+        raise InactiveAccountError("Account is inactive")
 
     access_token = create_access_token(user)
     refresh_token, jti, expires_at = create_refresh_token(user)
@@ -106,6 +120,8 @@ def refresh_session(*, db: Session, refresh_token: str) -> AuthSession:
     user = db.scalar(select(User).where(User.id == stored_token.user_id))
     if not user:
         raise RefreshTokenError("User not found")
+    if user.deleted_at is not None or not user.active:
+        raise RefreshTokenError("Account is inactive")
 
     stored_token.revoked_at = _utcnow_naive()
 
@@ -132,6 +148,73 @@ def logout(*, db: Session, refresh_token: str | None) -> None:
     if stored_token and not stored_token.revoked_at:
         stored_token.revoked_at = _utcnow_naive()
         db.commit()
+
+
+def change_password(*, db: Session, user: User, current_password: str, new_password: str) -> None:
+    if not verify_password(current_password, user.hashed_password):
+        raise PasswordMismatchError("Current password is incorrect")
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+
+
+def list_staff(*, db: Session) -> list[User]:
+    return list(db.scalars(select(User).where(User.role == UserRole.REVIEWER.value).order_by(User.created_at.desc())).all())
+
+
+def archive_staff(*, db: Session, actor: User, staff_id: str) -> User:
+    if actor.role != UserRole.ADMIN.value:
+        raise ForbiddenActionError("Admin access required")
+
+    staff = db.scalar(select(User).where(User.id == staff_id, User.role == UserRole.REVIEWER.value))
+    if not staff:
+        raise UserNotFoundError("Staff not found")
+
+    staff.active = False
+    db.commit()
+    db.refresh(staff)
+    return staff
+
+
+def unarchive_staff(*, db: Session, actor: User, staff_id: str) -> User:
+    if actor.role != UserRole.ADMIN.value:
+        raise ForbiddenActionError("Admin access required")
+
+    staff = db.scalar(select(User).where(User.id == staff_id, User.role == UserRole.REVIEWER.value))
+    if not staff:
+        raise UserNotFoundError("Staff not found")
+    if staff.deleted_at is not None:
+        raise ForbiddenActionError("Deleted staff cannot be unarchived")
+
+    staff.active = True
+    db.commit()
+    db.refresh(staff)
+    return staff
+
+
+def soft_delete_staff(*, db: Session, actor: User, staff_id: str) -> User:
+    if actor.role != UserRole.ADMIN.value:
+        raise ForbiddenActionError("Admin access required")
+
+    staff = db.scalar(select(User).where(User.id == staff_id, User.role == UserRole.REVIEWER.value))
+    if not staff:
+        raise UserNotFoundError("Staff not found")
+
+    deletion_time = _utcnow_naive()
+    staff.active = False
+    staff.deleted_at = deletion_time
+
+    scores = db.scalars(
+        select(Score).where(
+            Score.reviewer_id == staff.id,
+            Score.deleted_at.is_(None),
+        )
+    ).all()
+    for score in scores:
+        score.deleted_at = deletion_time
+
+    db.commit()
+    db.refresh(staff)
+    return staff
 
 
 def _decode_refresh_payload(refresh_token: str) -> dict:

@@ -115,4 +115,6 @@ def get_current_user(token: str = Depends(get_access_token), db: Session = Depen
     user = db.scalar(select(User).where(User.id == user_id))
     if not user:
         raise auth_error
+    if user.deleted_at is not None or not user.active:
+        raise auth_error
     return user

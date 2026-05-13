@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import { Avatar } from './Avatar'
-import { ChevronDownIcon, LogoutIcon, StaffIcon } from './Icons'
+import { ChevronDownIcon, KeyIcon, LogoutIcon, StaffIcon } from './Icons'
 
 export function Navbar() {
   const { user, logout } = useAuth()
@@ -66,6 +66,14 @@ export function Navbar() {
 
             {menuOpen ? (
               <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-ng-line bg-ng-white p-1 shadow-xl">
+                <Link
+                  to="/account/password"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-amber-700 hover:bg-amber-50"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <KeyIcon className="h-4 w-4" />
+                  Change Password
+                </Link>
                 {user?.role === 'admin' ? (
                   <Link
                     to="/staff/new"
@@ -73,7 +81,7 @@ export function Navbar() {
                     onClick={() => setMenuOpen(false)}
                   >
                     <StaffIcon className="h-4 w-4" />
-                    Add Staff Reviewer
+                    Manage Staff
                   </Link>
                 ) : null}
                 <button

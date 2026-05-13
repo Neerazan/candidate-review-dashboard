@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from dataclasses import dataclass
 
 from sqlalchemy import String, cast, func, or_, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Candidate, Score, User, UserRole
@@ -117,9 +117,14 @@ def get_candidate_or_404(db: Session, candidate_id: str) -> Candidate:
 
 
 def get_candidate_scores_for_user(candidate: Candidate, user: User) -> list[Score]:
+    visible_scores = [
+        score
+        for score in candidate.scores
+        if score.deleted_at is None and score.reviewer and score.reviewer.deleted_at is None and score.reviewer.active
+    ]
     if user.role == UserRole.ADMIN.value:
-        return list(candidate.scores)
-    return [score for score in candidate.scores if score.reviewer_id == user.id]
+        return visible_scores
+    return [score for score in visible_scores if score.reviewer_id == user.id]
 
 
 def create_score(*, db: Session, candidate_id: str, reviewer: User, payload: ScoreCreate) -> Score:
@@ -132,6 +137,17 @@ def create_score(*, db: Session, candidate_id: str, reviewer: User, payload: Sco
     if candidate.status == "archived":
         raise CandidateArchivedError("Cannot score archived candidate")
 
+    existing_score = db.scalar(
+        select(Score).where(
+            Score.candidate_id == candidate_id,
+            Score.reviewer_id == reviewer.id,
+            Score.category == payload.category,
+            Score.deleted_at.is_(None),
+        )
+    )
+    if existing_score:
+        raise DuplicateScoreError("Score already exists for this category")
+
     score = Score(
         candidate_id=candidate_id,
         reviewer_id=reviewer.id,
@@ -140,11 +156,7 @@ def create_score(*, db: Session, candidate_id: str, reviewer: User, payload: Sco
         note=payload.note,
     )
     db.add(score)
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise DuplicateScoreError("Score already exists for this category") from exc
+    db.commit()
 
     db.refresh(score)
     candidate_event_bus.publish_score_event(candidate_id=candidate_id, action="created", score_id=score.id)
@@ -169,7 +181,7 @@ def update_score(
         raise CandidateArchivedError("Cannot update score for archived candidate")
 
     score = db.scalar(select(Score).where(Score.id == score_id, Score.candidate_id == candidate_id))
-    if not score:
+    if not score or score.deleted_at is not None:
         raise ScoreNotFoundError("Score not found")
 
     if score.reviewer_id != actor.id:
@@ -190,14 +202,14 @@ def delete_score(*, db: Session, candidate_id: str, score_id: str, actor: User) 
         raise PermissionDeniedError("Only reviewers can delete scores")
 
     score = db.scalar(select(Score).where(Score.id == score_id, Score.candidate_id == candidate_id))
-    if not score:
+    if not score or score.deleted_at is not None:
         raise ScoreNotFoundError("Score not found")
 
     if score.reviewer_id != actor.id:
         raise PermissionDeniedError("You can only delete your own scores")
 
     deleted_score_id = score.id
-    db.delete(score)
+    score.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
     candidate_event_bus.publish_score_event(candidate_id=candidate_id, action="deleted", score_id=deleted_score_id)
 

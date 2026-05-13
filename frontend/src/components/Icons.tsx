@@ -176,3 +176,24 @@ export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
     </BaseIcon>
   )
 }
+
+export function KeyIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <BaseIcon {...props}>
+      <circle cx="7.5" cy="15.5" r="3.5" />
+      <path d="M11 13l8-8" />
+      <path d="M16 5h3v3" />
+    </BaseIcon>
+  )
+}
+
+export function UnarchiveIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M3 7h18" />
+      <path d="M5 7l1 13h12l1-13" />
+      <path d="M12 17V9" />
+      <path d="M8.5 12.5L12 9l3.5 3.5" />
+    </BaseIcon>
+  )
+}
