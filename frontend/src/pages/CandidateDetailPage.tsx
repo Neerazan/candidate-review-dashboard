@@ -36,6 +36,7 @@ export function CandidateDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [editingScoreId, setEditingScoreId] = useState<string | null>(null)
 
   const isAdmin = user?.role === 'admin'
 
@@ -110,6 +111,10 @@ export function CandidateDetailPage() {
     await fetchCandidate()
   }
 
+  function renderStars(score: number) {
+    return '★'.repeat(score) + '☆'.repeat(5 - score)
+  }
+
   return (
     <div className="app-shell">
       <Navbar />
@@ -131,10 +136,20 @@ export function CandidateDetailPage() {
             <div className="space-y-4">
               <section className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-extrabold">{candidate.name}</h1>
-                    <p className="text-sm text-ng-muted">{candidate.email}</p>
-                    <p className="mt-2 text-sm text-ng-muted">Role: {candidate.role_applied}</p>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ng-blue-light text-lg font-bold text-ng-blue">
+                      {candidate.name
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0]?.toUpperCase() ?? '')
+                        .join('')}
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-extrabold">{candidate.name}</h1>
+                      <p className="text-sm text-ng-muted">{candidate.email}</p>
+                      <p className="mt-2 text-sm text-ng-muted">Role: {candidate.role_applied}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={candidate.status} />
@@ -152,25 +167,82 @@ export function CandidateDetailPage() {
                 </div>
                 <div className="mt-4 grid gap-3 text-sm text-ng-muted md:grid-cols-2">
                   <p>
-                    <span className="font-semibold text-ng-ink">Skills:</span> {candidate.skills.join(', ')}
-                  </p>
-                  <p>
                     <span className="font-semibold text-ng-ink">Experience:</span>{' '}
                     {candidate.experience_summary ?? 'Not provided'}
                   </p>
+                  <div className="md:pl-10">
+                    <p className="text-sm font-semibold text-ng-ink">Applied</p>
+                    <p className="text-sm text-ng-muted">
+                      {new Date(candidate.created_at).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-semibold text-ng-ink">Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                  {candidate.skills.map((skill) => (
+                    <span key={skill} className="rounded-full border border-ng-line bg-ng-surface px-2.5 py-1 text-xs text-ng-muted">
+                      {skill}
+                    </span>
+                  ))}
+                  </div>
                 </div>
               </section>
 
-              <ScoreTable
-                scores={candidate.scores}
-                canEdit={Boolean(canReviewerEditScores)}
-                onUpdate={handleUpdateScore}
-                onDelete={handleDeleteScore}
-              />
+              {user?.role === 'reviewer' ? (
+                <section className="card p-5">
+                  <h3 className="mb-3 text-lg font-semibold text-ng-ink">Your scores</h3>
+                  {candidate.scores.length === 0 ? (
+                    <p className="text-sm text-ng-muted">No scores submitted yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {candidate.scores.map((score) => (
+                        <div key={score.id} className="border-b border-ng-line pb-3 last:border-b-0 last:pb-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-ng-ink">{score.category.replaceAll('_', ' ')}</p>
+                              <p className="mt-1 text-sm text-ng-muted">{score.note ?? 'No note added.'}</p>
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  type="button"
+                                  className="btn-secondary px-2 py-1 text-xs"
+                                  onClick={() => setEditingScoreId(score.id)}
+                                >
+                                  ✎ Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-danger px-2 py-1 text-xs"
+                                  onClick={() => void handleDeleteScore(score.id)}
+                                >
+                                  🗑 Delete
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-lg text-ng-blue">{renderStars(score.score)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : (
+                <ScoreTable
+                  scores={candidate.scores}
+                  canEdit={Boolean(canReviewerEditScores)}
+                  onUpdate={handleUpdateScore}
+                  onDelete={handleDeleteScore}
+                />
+              )}
 
               <SummaryCard
                 summary={candidate.ai_summary}
                 loading={summaryLoading}
+                generatedAt={candidate.ai_summary ? candidate.updated_at : undefined}
                 onGenerate={handleGenerateSummary}
               />
             </div>
@@ -181,7 +253,30 @@ export function CandidateDetailPage() {
                   <div className="rounded-xl border border-ng-line bg-ng-blue-light p-3 text-sm text-ng-blue">
                     You can only see your own scores.
                   </div>
-                  <ScoreForm onSubmit={handleCreateScore} disabled={candidate.status === 'archived'} />
+                  <ScoreForm
+                    onSubmit={async (payload) => {
+                      if (!editingScoreId) {
+                        await handleCreateScore(payload)
+                        return
+                      }
+                      await handleUpdateScore(editingScoreId, payload.score, payload.note)
+                      setEditingScoreId(null)
+                    }}
+                    disabled={candidate.status === 'archived'}
+                    mode={editingScoreId ? 'update' : 'create'}
+                    initialValue={
+                      editingScoreId
+                        ? {
+                            category:
+                              (candidate.scores.find((score) => score.id === editingScoreId)?.category as ScoreCreatePayload['category']) ??
+                              'technical_skills',
+                            score: candidate.scores.find((score) => score.id === editingScoreId)?.score ?? 3,
+                            note: candidate.scores.find((score) => score.id === editingScoreId)?.note ?? null,
+                          }
+                        : null
+                    }
+                    onCancelEdit={() => setEditingScoreId(null)}
+                  />
                 </>
               ) : null}
 

@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ScoreCategory, ScoreCreatePayload } from '../types/score'
 
 interface ScoreFormProps {
   onSubmit: (payload: ScoreCreatePayload) => Promise<void>
   disabled?: boolean
+  initialValue?: ScoreCreatePayload | null
+  mode?: 'create' | 'update'
+  onCancelEdit?: () => void
 }
 
 const categoryOptions: { value: ScoreCategory; label: string }[] = [
@@ -14,20 +17,28 @@ const categoryOptions: { value: ScoreCategory; label: string }[] = [
   { value: 'culture_fit', label: 'Culture Fit' },
 ]
 
-export function ScoreForm({ onSubmit, disabled }: ScoreFormProps) {
-  const [category, setCategory] = useState<ScoreCategory>('technical_skills')
-  const [score, setScore] = useState(3)
-  const [note, setNote] = useState('')
+export function ScoreForm({ onSubmit, disabled, initialValue, mode = 'create', onCancelEdit }: ScoreFormProps) {
+  const [category, setCategory] = useState<ScoreCategory>(initialValue?.category ?? 'technical_skills')
+  const [score, setScore] = useState(initialValue?.score ?? 3)
+  const [note, setNote] = useState(initialValue?.note ?? '')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setCategory(initialValue?.category ?? 'technical_skills')
+    setScore(initialValue?.score ?? 3)
+    setNote(initialValue?.note ?? '')
+  }, [initialValue])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     try {
       await onSubmit({ category, score, note: note || null })
-      setScore(3)
-      setCategory('technical_skills')
-      setNote('')
+      if (mode === 'create') {
+        setScore(3)
+        setCategory('technical_skills')
+        setNote('')
+      }
     } finally {
       setLoading(false)
     }
@@ -35,8 +46,8 @@ export function ScoreForm({ onSubmit, disabled }: ScoreFormProps) {
 
   return (
     <form className="card p-4" onSubmit={handleSubmit}>
-      <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ng-ghost">Add a score</h3>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <h3 className="mb-3 text-lg font-semibold text-ng-ink">{mode === 'update' ? 'Edit score' : 'Add a score'}</h3>
+      <div className="grid grid-cols-1 gap-3">
         <div>
           <label className="label">Category</label>
           <select className="input" value={category} onChange={(e) => setCategory(e.target.value as ScoreCategory)}>
@@ -49,22 +60,41 @@ export function ScoreForm({ onSubmit, disabled }: ScoreFormProps) {
         </div>
         <div>
           <label className="label">Score</label>
-          <select className="input" value={score} onChange={(e) => setScore(Number(e.target.value))}>
-            {[1, 2, 3, 4, 5].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((value) => {
+              const active = value === score
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={`h-10 w-10 rounded-lg border text-sm font-semibold ${
+                    active
+                      ? 'border-ng-blue bg-ng-blue-light text-ng-blue'
+                      : 'border-ng-line bg-ng-white text-ng-muted hover:bg-ng-surface'
+                  }`}
+                  onClick={() => setScore(value)}
+                >
+                  {value}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
       <div className="mt-3">
         <label className="label">Note</label>
-        <textarea className="input min-h-24" value={note} onChange={(e) => setNote(e.target.value)} />
+        <textarea className="input min-h-24" placeholder="Add observations..." value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
-      <button type="submit" className="btn-primary mt-4 w-full" disabled={disabled || loading}>
-        {loading ? 'Saving...' : 'Submit Score'}
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button type="submit" className="btn-primary w-full" disabled={disabled || loading}>
+          {loading ? 'Saving...' : mode === 'update' ? 'Update Score' : 'Submit Score'}
+        </button>
+        {mode === 'update' && onCancelEdit ? (
+          <button type="button" className="btn-secondary" onClick={onCancelEdit} disabled={loading}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
     </form>
   )
 }
