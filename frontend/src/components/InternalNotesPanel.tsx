@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Button } from './Button'
 import { ClearIcon, SaveIcon } from './Icons'
 
 interface InternalNotesPanelProps {
@@ -40,12 +41,12 @@ export function InternalNotesPanel({ value, onSave, onDelete, compact = false, c
       {!compact ? <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ng-red">Internal Notes (Admin only)</h3> : null}
       <textarea className="input min-h-28" value={notes} onChange={(e) => setNotes(e.target.value)} />
       <div className="mt-3 flex gap-2">
-        <button type="button" className="btn-primary" onClick={() => void handleSave()} disabled={loading || !notes.trim()}>
-          <span className="inline-flex items-center gap-2"><SaveIcon className="h-4 w-4" />Save Notes</span>
-        </button>
-        <button type="button" className="btn-danger" onClick={() => void handleDelete()} disabled={loading || !canClear}>
-          <span className="inline-flex items-center gap-2"><ClearIcon className="h-4 w-4" />Clear Notes</span>
-        </button>
+        <Button type="button" variant="primary" onClick={() => void handleSave()} disabled={loading || !notes.trim()} leftIcon={<SaveIcon className="h-4 w-4" />}>
+          Save Notes
+        </Button>
+        <Button type="button" variant="danger" onClick={() => void handleDelete()} disabled={loading || !canClear} leftIcon={<ClearIcon className="h-4 w-4" />}>
+          Clear Notes
+        </Button>
       </div>
     </section>
   )

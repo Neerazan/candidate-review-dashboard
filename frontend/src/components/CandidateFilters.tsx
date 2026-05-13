@@ -1,4 +1,5 @@
 import type { CandidateFilters as CandidateFiltersType } from '../types/candidate'
+import { Button } from './Button'
 import { ClearIcon } from './Icons'
 
 interface CandidateFiltersProps {
@@ -42,16 +43,15 @@ export function CandidateFilters({ value, onChange, includeArchivedOption }: Can
           onChange={(e) => update('skill', e.target.value)}
         />
         <div>
-          <button
+          <Button
             type="button"
-            className="btn-secondary w-full gap-2 xl:w-auto"
-            onClick={() =>
-              onChange({ status: '', role_applied: '', skill: '', keyword: '', page: 1, page_size: value.page_size })
-            }
+            variant="secondary"
+            className="w-full xl:w-auto"
+            onClick={() => onChange({ status: '', role_applied: '', skill: '', keyword: '', page: 1, page_size: value.page_size })}
+            leftIcon={<ClearIcon className="h-4 w-4" />}
           >
-            <ClearIcon className="h-4 w-4" />
             Clear
-          </button>
+          </Button>
         </div>
       </div>
     </div>

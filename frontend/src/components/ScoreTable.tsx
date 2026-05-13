@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AdminScore, Score } from '../types/score'
+import { Button } from './Button'
 
 interface ScoreTableProps {
   scores: Score[] | AdminScore[]
@@ -65,30 +66,33 @@ export function ScoreTable({ scores, canEdit, onUpdate, onDelete }: ScoreTablePr
               {canEdit ? (
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       type="button"
-                      className="btn-secondary px-3 py-1"
+                      variant="secondary"
+                      size="sm"
                       disabled={busyId === score.id}
                       onClick={() => void handleQuickAdjust(score, 1)}
                     >
                       +1
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="btn-secondary px-3 py-1"
+                      variant="secondary"
+                      size="sm"
                       disabled={busyId === score.id}
                       onClick={() => void handleQuickAdjust(score, -1)}
                     >
                       -1
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="btn-danger px-3 py-1"
+                      variant="danger"
+                      size="sm"
                       disabled={busyId === score.id}
                       onClick={() => void handleDelete(score.id)}
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </td>
               ) : null}

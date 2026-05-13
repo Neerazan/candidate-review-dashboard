@@ -12,6 +12,8 @@ import {
   updateScore,
 } from '../api/candidates'
 import { ErrorState } from '../components/ErrorState'
+import { Avatar } from '../components/Avatar'
+import { Button } from '../components/Button'
 import { InternalNotesPanel } from '../components/InternalNotesPanel'
 import { LoadingState } from '../components/LoadingState'
 import { Navbar } from '../components/Navbar'
@@ -230,9 +232,9 @@ export function CandidateDetailPage() {
           <Link to="/candidates" className="text-sm font-semibold text-ng-blue hover:text-ng-blue-dark">
             ← Back to Candidates
           </Link>
-          <button type="button" className="btn-secondary" onClick={() => navigate('/candidates')}>
-            <span className="inline-flex items-center gap-2"><ListIcon className="h-4 w-4" />Candidate List</span>
-          </button>
+          <Button type="button" variant="secondary" onClick={() => navigate('/candidates')} leftIcon={<ListIcon className="h-4 w-4" />}>
+            Candidate List
+          </Button>
         </div>
 
         {error ? <ErrorState message={error} /> : null}
@@ -244,14 +246,7 @@ export function CandidateDetailPage() {
               <section className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ng-blue-light text-lg font-bold text-ng-blue">
-                      {candidate.name
-                        .split(' ')
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((part) => part[0]?.toUpperCase() ?? '')
-                        .join('')}
-                    </div>
+                    <Avatar name={candidate.name} size="lg" />
                     <div>
                       <h1 className="text-2xl font-extrabold">{candidate.name}</h1>
                       <p className="text-sm text-ng-muted">{candidate.email}</p>
@@ -261,14 +256,15 @@ export function CandidateDetailPage() {
                   <div className="flex items-center gap-2">
                     <StatusBadge status={candidate.status} />
                     {isAdmin ? (
-                      <button
+                      <Button
                         type="button"
-                        className="btn-danger"
+                        variant="danger"
                         onClick={() => void handleArchiveCandidate()}
                         disabled={candidate.status === 'archived'}
+                        leftIcon={<ArchiveIcon className="h-4 w-4" />}
                       >
-                        <span className="inline-flex items-center gap-2"><ArchiveIcon className="h-4 w-4" />Archive</span>
-                      </button>
+                        Archive
+                      </Button>
                     ) : null}
                   </div>
                 </div>
@@ -308,22 +304,26 @@ export function CandidateDetailPage() {
                               <p className="font-semibold text-ng-ink">{score.category.replaceAll('_', ' ')}</p>
                               <p className="mt-1 text-sm text-ng-muted">{score.note ?? 'No note added.'}</p>
                               <div className="mt-2 flex gap-2">
-                                <button
+                                <Button
                                   type="button"
-                                  className="btn-secondary px-2 py-1 text-xs"
+                                  variant="secondary"
+                                  size="sm"
                                   disabled={!canReviewerEditScores}
                                   onClick={() => setEditingScoreId(score.id)}
+                                  leftIcon={<EditIcon className="h-3.5 w-3.5" />}
                                 >
-                                  <span className="inline-flex items-center gap-1"><EditIcon className="h-3.5 w-3.5" />Edit</span>
-                                </button>
-                                <button
+                                  Edit
+                                </Button>
+                                <Button
                                   type="button"
-                                  className="btn-danger px-2 py-1 text-xs"
+                                  variant="danger"
+                                  size="sm"
                                   disabled={!canReviewerEditScores}
                                   onClick={() => void handleDeleteScore(score.id)}
+                                  leftIcon={<ArchiveIcon className="h-3.5 w-3.5" />}
                                 >
-                                  <span className="inline-flex items-center gap-1"><ArchiveIcon className="h-3.5 w-3.5" />Delete</span>
-                                </button>
+                                  Delete
+                                </Button>
                               </div>
                             </div>
                             <p className="text-lg text-ng-blue">{renderStars(score.score)}</p>
@@ -344,14 +344,7 @@ export function CandidateDetailPage() {
                         <div key={`${group.reviewerEmail}-${index}`} className="border-b border-ng-line pb-4 last:border-b-0 last:pb-0">
                           <div className="mb-2 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ng-blue-light text-xs font-bold text-ng-blue">
-                                {group.reviewerName
-                                  .split(' ')
-                                  .filter(Boolean)
-                                  .slice(0, 2)
-                                  .map((part) => part[0]?.toUpperCase() ?? '')
-                                  .join('')}
-                              </div>
+                              <Avatar name={group.reviewerName} size="sm" />
                               <div>
                                 <p className="font-semibold text-ng-ink">{group.reviewerName}</p>
                                 <p className="text-xs text-ng-muted">{group.reviewerEmail}</p>
@@ -464,9 +457,16 @@ export function CandidateDetailPage() {
                     <option value="rejected">rejected</option>
                     <option value="archived">archived</option>
                   </select>
-                  <button type="button" className="btn-secondary mt-3 w-full" onClick={() => void handleSaveStatus()}>
-                    <span className="inline-flex items-center gap-2"><SaveIcon className="h-4 w-4" />Save status</span>
-                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    fullWidth
+                    className="mt-3"
+                    onClick={() => void handleSaveStatus()}
+                    leftIcon={<SaveIcon className="h-4 w-4" />}
+                  >
+                    Save status
+                  </Button>
                 </section>
               ) : null}
 

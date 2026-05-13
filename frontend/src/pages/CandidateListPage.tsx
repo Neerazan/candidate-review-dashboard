@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CandidateFilters } from '../components/CandidateFilters'
+import { Button } from '../components/Button'
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons'
 import { ClearIcon, HiredIcon, ReviewIcon, SubmitIcon, ViewIcon } from '../components/Icons'
 import { CandidateTable } from '../components/CandidateTable'
@@ -140,24 +141,24 @@ export function CandidateListPage() {
               Page {data.page} • {data.total} total candidates
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn-secondary inline-flex items-center gap-1"
+                variant="secondary"
                 disabled={filters.page <= 1 || loading}
                 onClick={() => setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                leftIcon={<ChevronLeftIcon className="h-4 w-4" />}
               >
-                <ChevronLeftIcon className="h-4 w-4" />
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-secondary inline-flex items-center gap-1"
+                variant="secondary"
                 disabled={loading || data.page * data.page_size >= data.total}
                 onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
+                rightIcon={<ChevronRightIcon className="h-4 w-4" />}
               >
                 Next
-                <ChevronRightIcon className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}

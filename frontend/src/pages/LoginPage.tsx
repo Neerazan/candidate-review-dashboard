@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
 import { useAuth } from '../context/AuthContext'
 
@@ -51,9 +52,9 @@ export function LoginPage() {
           </div>
         </div>
         {error ? <div className="mt-3"><ErrorState message={error} /></div> : null}
-        <button type="submit" className="btn-primary mt-4 w-full" disabled={loading}>
+        <Button type="submit" variant="primary" fullWidth className="mt-4" disabled={loading}>
           {loading ? 'Signing in...' : 'Login'}
-        </button>
+        </Button>
       </form>
     </main>
   )

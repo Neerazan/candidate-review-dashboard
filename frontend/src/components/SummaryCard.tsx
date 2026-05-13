@@ -1,6 +1,7 @@
 import { GenerateIcon } from './Icons'
 import { AiIcon } from './Icons'
 import { formatLongDateTime } from '../utils/date'
+import { Button } from './Button'
 
 interface SummaryCardProps {
   summary: string | null
@@ -20,16 +21,15 @@ export function SummaryCard({ summary, loading, generatedAt, disabled = false, o
           <AiIcon className="h-4 w-4" />
           AI Summary
         </h3>
-        <button type="button" className="btn-primary" disabled={loading || disabled} onClick={() => void onGenerate()}>
-          {loading ? (
-            'Generating...'
-          ) : (
-            <span className="inline-flex items-center gap-2">
-              <GenerateIcon className="h-4 w-4" />
-              {hasSummary ? 'Regenerate Summary' : 'Generate Summary'}
-            </span>
-          )}
-        </button>
+        <Button
+          type="button"
+          variant="primary"
+          disabled={loading || disabled}
+          onClick={() => void onGenerate()}
+          leftIcon={!loading ? <GenerateIcon className="h-4 w-4" /> : undefined}
+        >
+          {loading ? 'Generating...' : hasSummary ? 'Regenerate Summary' : 'Generate Summary'}
+        </Button>
       </div>
       <p className="rounded-xl bg-ng-surface p-4 text-sm leading-relaxed text-ng-muted">
         {loading ? 'Analyzing candidate profile and scoring signals...' : summary ?? 'No summary generated yet.'}

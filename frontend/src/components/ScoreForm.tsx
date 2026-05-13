@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ScoreCategory, ScoreCreatePayload } from '../types/score'
+import { Button } from './Button'
 import { ClearIcon, SaveIcon, SubmitIcon } from './Icons'
 
 interface ScoreFormProps {
@@ -94,19 +95,19 @@ export function ScoreForm({ onSubmit, disabled, initialValue, mode = 'create', o
         />
       </div>
       <div className="mt-4 flex gap-2">
-        <button type="submit" className="btn-primary w-full" disabled={disabled || loading}>
-          {loading ? (
-            'Saving...'
-          ) : mode === 'update' ? (
-            <span className="inline-flex items-center gap-2"><SaveIcon className="h-4 w-4" />Update Score</span>
-          ) : (
-            <span className="inline-flex items-center gap-2"><SubmitIcon className="h-4 w-4" />Submit Score</span>
-          )}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          fullWidth
+          disabled={disabled || loading}
+          leftIcon={!loading ? (mode === 'update' ? <SaveIcon className="h-4 w-4" /> : <SubmitIcon className="h-4 w-4" />) : undefined}
+        >
+          {loading ? 'Saving...' : mode === 'update' ? 'Update Score' : 'Submit Score'}
+        </Button>
         {mode === 'update' && onCancelEdit ? (
-          <button type="button" className="btn-secondary" onClick={onCancelEdit} disabled={loading}>
-            <span className="inline-flex items-center gap-2"><ClearIcon className="h-4 w-4" />Cancel</span>
-          </button>
+          <Button type="button" variant="secondary" onClick={onCancelEdit} disabled={loading} leftIcon={<ClearIcon className="h-4 w-4" />}>
+            Cancel
+          </Button>
         ) : null}
       </div>
     </form>

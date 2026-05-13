@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { Button } from '../components/Button'
 
 type ConfirmOptions = {
   title: string
@@ -56,16 +57,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             <h3 className="text-lg font-bold text-ng-ink">{state.title}</h3>
             <p className="mt-2 text-sm text-ng-muted">{state.description}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="btn-secondary" onClick={() => close(false)}>
+              <Button type="button" variant="secondary" onClick={() => close(false)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className={state.tone === 'danger' ? 'btn-danger' : 'btn-primary'}
+                variant={state.tone === 'danger' ? 'danger' : 'primary'}
                 onClick={() => close(true)}
               >
                 {state.confirmText}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
