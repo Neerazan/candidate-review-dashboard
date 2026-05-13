@@ -185,6 +185,16 @@ export function CandidateDetailPage() {
   }
 
   async function handleDeleteScore(scoreId: string) {
+    const approved = await confirm({
+      title: 'Delete score?',
+      description: 'This will permanently remove your score for this category.',
+      confirmText: 'Delete Score',
+      tone: 'danger',
+    })
+    if (!approved) {
+      return
+    }
+
     await deleteScore(candidateId, scoreId)
     await fetchCandidate()
   }

@@ -1,5 +1,5 @@
 import { apiRequest } from './client'
-import type { AuthUser, LoginPayload } from '../types/auth'
+import type { AuthUser, LoginPayload, RegisterPayload } from '../types/auth'
 
 export function login(payload: LoginPayload): Promise<{ access_token: string; token_type: string }> {
   return apiRequest('/auth/login', {
@@ -14,4 +14,11 @@ export function logout(): Promise<void> {
 
 export function getMe(): Promise<AuthUser> {
   return apiRequest('/auth/me')
+}
+
+export function registerReviewer(payload: RegisterPayload): Promise<AuthUser> {
+  return apiRequest('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

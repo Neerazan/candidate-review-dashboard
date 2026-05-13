@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { AddStaffPage } from './pages/AddStaffPage'
 import { CandidateDetailPage } from './pages/CandidateDetailPage'
 import { CandidateListPage } from './pages/CandidateListPage'
 import { LoginPage } from './pages/LoginPage'
@@ -11,6 +12,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/candidates" element={<CandidateListPage />} />
         <Route path="/candidates/:candidateId" element={<CandidateDetailPage />} />
+        <Route path="/staff/new" element={<AddStaffPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/candidates" replace />} />
     </Routes>
