@@ -16,12 +16,14 @@ import { InternalNotesPanel } from '../components/InternalNotesPanel'
 import { LoadingState } from '../components/LoadingState'
 import { Navbar } from '../components/Navbar'
 import { ScoreForm } from '../components/ScoreForm'
-import { ScoreTable } from '../components/ScoreTable'
 import { StatusBadge } from '../components/StatusBadge'
 import { SummaryCard } from '../components/SummaryCard'
+import { ArchiveIcon, EditIcon, ListIcon, SaveIcon } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../context/ConfirmContext'
 import type { CandidateDetail, CandidateDetailAdmin } from '../types/candidate'
 import type { ScoreCreatePayload } from '../types/score'
+import { formatLongDate } from '../utils/date'
 
 function isAdminDetail(candidate: CandidateDetail | CandidateDetailAdmin): candidate is CandidateDetailAdmin {
   return 'internal_notes' in candidate
@@ -31,18 +33,21 @@ export function CandidateDetailPage() {
   const { candidateId = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { confirm } = useConfirm()
   const [candidate, setCandidate] = useState<CandidateDetail | CandidateDetailAdmin | null>(null)
   const [notes, setNotes] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [editingScoreId, setEditingScoreId] = useState<string | null>(null)
+  const [statusDraft, setStatusDraft] = useState('')
 
   const isAdmin = user?.role === 'admin'
+  const reviewerStatusLocked = ['archived', 'hired', 'rejected'].includes(candidate?.status ?? '')
 
   const canReviewerEditScores = useMemo(
-    () => user?.role === 'reviewer' && candidate?.status !== 'archived',
-    [user?.role, candidate?.status],
+    () => user?.role === 'reviewer' && !reviewerStatusLocked,
+    [user?.role, reviewerStatusLocked],
   )
 
   async function fetchCandidate() {
@@ -68,6 +73,12 @@ export function CandidateDetailPage() {
   useEffect(() => {
     void fetchCandidate()
   }, [candidateId, isAdmin])
+
+  useEffect(() => {
+    if (candidate) {
+      setStatusDraft(candidate.status)
+    }
+  }, [candidate])
 
   async function handleCreateScore(payload: ScoreCreatePayload) {
     await createScore(candidateId, payload)
@@ -101,19 +112,115 @@ export function CandidateDetailPage() {
   }
 
   async function handleDeleteNotes() {
+    const approved = await confirm({
+      title: 'Clear internal notes?',
+      description: 'This will remove the internal notes for this candidate.',
+      confirmText: 'Clear Notes',
+      tone: 'danger',
+    })
+    if (!approved) {
+      return
+    }
     await deleteInternalNotes(candidateId)
     setNotes(null)
     await fetchCandidate()
   }
 
-  async function handleArchiveCandidate() {
+  async function handleArchiveCandidate(skipConfirm = false) {
+    if (!skipConfirm) {
+      const approved = await confirm({
+        title: 'Archive candidate?',
+        description: 'The candidate will move to archived status and reviewer actions will be locked.',
+        confirmText: 'Archive',
+        tone: 'danger',
+      })
+      if (!approved) {
+        return
+      }
+    }
     await archiveCandidate(candidateId)
     await fetchCandidate()
+  }
+
+  async function handleSaveStatus() {
+    if (!candidate) {
+      return
+    }
+    if (statusDraft === candidate.status) {
+      return
+    }
+
+    const approved = await confirm({
+      title: 'Update candidate status?',
+      description: `Change status from ${candidate.status} to ${statusDraft}?`,
+      confirmText: 'Save Status',
+    })
+    if (!approved) {
+      return
+    }
+
+    if (statusDraft === 'archived') {
+      await handleArchiveCandidate(true)
+      return
+    }
+    setError('Status update is currently limited to archive only.')
   }
 
   function renderStars(score: number) {
     return '★'.repeat(score) + '☆'.repeat(5 - score)
   }
+
+  const adminReviewerGroups = useMemo(() => {
+    if (!isAdmin || !candidate) {
+      return []
+    }
+    const map = new Map<
+      string,
+      {
+        reviewerName: string
+        reviewerEmail: string
+        items: Array<{ category: string; note: string | null; score: number; created_at: string }>
+      }
+    >()
+
+    candidate.scores.forEach((score) => {
+      const adminScore = score as CandidateDetailAdmin['scores'][number]
+      const key = adminScore.reviewer_id
+      if (!map.has(key)) {
+        map.set(key, {
+          reviewerName: adminScore.reviewer_name,
+          reviewerEmail: adminScore.reviewer_email,
+          items: [],
+        })
+      }
+      map.get(key)?.items.push({
+        category: adminScore.category,
+        note: adminScore.note,
+        score: adminScore.score,
+        created_at: adminScore.created_at,
+      })
+    })
+    return Array.from(map.values())
+  }, [candidate, isAdmin])
+
+  const adminAverages = useMemo(() => {
+    if (!isAdmin || !candidate || candidate.scores.length === 0) {
+      return []
+    }
+    const aggregate: Record<string, { total: number; count: number }> = {}
+    candidate.scores.forEach((item) => {
+      const key = item.category
+      if (!aggregate[key]) {
+        aggregate[key] = { total: 0, count: 0 }
+      }
+      aggregate[key].total += item.score
+      aggregate[key].count += 1
+    })
+    return Object.entries(aggregate).map(([category, value]) => ({
+      category,
+      avg: Number((value.total / value.count).toFixed(1)),
+    }))
+  }, [candidate, isAdmin])
 
   return (
     <div className="app-shell">
@@ -124,7 +231,7 @@ export function CandidateDetailPage() {
             ← Back to Candidates
           </Link>
           <button type="button" className="btn-secondary" onClick={() => navigate('/candidates')}>
-            Candidate List
+            <span className="inline-flex items-center gap-2"><ListIcon className="h-4 w-4" />Candidate List</span>
           </button>
         </div>
 
@@ -160,7 +267,7 @@ export function CandidateDetailPage() {
                         onClick={() => void handleArchiveCandidate()}
                         disabled={candidate.status === 'archived'}
                       >
-                        Archive
+                        <span className="inline-flex items-center gap-2"><ArchiveIcon className="h-4 w-4" />Archive</span>
                       </button>
                     ) : null}
                   </div>
@@ -172,13 +279,7 @@ export function CandidateDetailPage() {
                   </p>
                   <div className="md:pl-10">
                     <p className="text-sm font-semibold text-ng-ink">Applied</p>
-                    <p className="text-sm text-ng-muted">
-                      {new Date(candidate.created_at).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
+                    <p className="text-sm text-ng-muted">{formatLongDate(candidate.created_at)}</p>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -210,16 +311,18 @@ export function CandidateDetailPage() {
                                 <button
                                   type="button"
                                   className="btn-secondary px-2 py-1 text-xs"
+                                  disabled={!canReviewerEditScores}
                                   onClick={() => setEditingScoreId(score.id)}
                                 >
-                                  ✎ Edit
+                                  <span className="inline-flex items-center gap-1"><EditIcon className="h-3.5 w-3.5" />Edit</span>
                                 </button>
                                 <button
                                   type="button"
                                   className="btn-danger px-2 py-1 text-xs"
+                                  disabled={!canReviewerEditScores}
                                   onClick={() => void handleDeleteScore(score.id)}
                                 >
-                                  🗑 Delete
+                                  <span className="inline-flex items-center gap-1"><ArchiveIcon className="h-3.5 w-3.5" />Delete</span>
                                 </button>
                               </div>
                             </div>
@@ -231,30 +334,100 @@ export function CandidateDetailPage() {
                   )}
                 </section>
               ) : (
-                <ScoreTable
-                  scores={candidate.scores}
-                  canEdit={Boolean(canReviewerEditScores)}
-                  onUpdate={handleUpdateScore}
-                  onDelete={handleDeleteScore}
-                />
+                <section className="card p-5">
+                  <h3 className="mb-3 text-lg font-semibold text-ng-ink">All reviewer scores</h3>
+                  {adminReviewerGroups.length === 0 ? (
+                    <p className="text-sm text-ng-muted">No reviewer scores yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {adminReviewerGroups.map((group, index) => (
+                        <div key={`${group.reviewerEmail}-${index}`} className="border-b border-ng-line pb-4 last:border-b-0 last:pb-0">
+                          <div className="mb-2 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ng-blue-light text-xs font-bold text-ng-blue">
+                                {group.reviewerName
+                                  .split(' ')
+                                  .filter(Boolean)
+                                  .slice(0, 2)
+                                  .map((part) => part[0]?.toUpperCase() ?? '')
+                                  .join('')}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-ng-ink">{group.reviewerName}</p>
+                                <p className="text-xs text-ng-muted">{group.reviewerEmail}</p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-ng-muted">
+                              {new Date(group.items[0]?.created_at ?? candidate.created_at).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                          <div className="mb-3 h-px w-full bg-ng-line" />
+                          <div className="space-y-2">
+                            {group.items.map((item, itemIndex) => (
+                              <div
+                                key={`${item.category}-${itemIndex}`}
+                                className={`rounded-lg px-2 py-1.5 ${itemIndex % 2 === 1 ? 'bg-ng-line/45' : ''}`}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm font-medium text-ng-ink">{item.category.replaceAll('_', ' ')}</p>
+                                  <p className="text-xl leading-none text-ng-blue">{renderStars(item.score)}</p>
+                                </div>
+                                {item.note ? <p className="text-sm italic text-ng-muted">{item.note}</p> : null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      {adminAverages.length > 0 ? (
+                        <div className="rounded-xl border border-ng-line bg-ng-surface p-3">
+                          <p className="mb-2 text-sm font-semibold text-ng-ink">Score averages</p>
+                          <div className="space-y-2">
+                            {adminAverages.map((item) => (
+                              <div key={item.category} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                                <div>
+                                  <p className="mb-1 text-xs text-ng-muted">{item.category.replaceAll('_', ' ')}</p>
+                                  <div className="h-2 rounded-full bg-ng-line">
+                                    <div className="h-2 rounded-full bg-ng-blue" style={{ width: `${(item.avg / 5) * 100}%` }} />
+                                  </div>
+                                </div>
+                                <p className="text-sm font-semibold text-ng-ink">{item.avg.toFixed(1)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </section>
               )}
 
               <SummaryCard
                 summary={candidate.ai_summary}
                 loading={summaryLoading}
                 generatedAt={candidate.ai_summary ? candidate.updated_at : undefined}
+                disabled={user?.role === 'reviewer' && reviewerStatusLocked}
                 onGenerate={handleGenerateSummary}
               />
             </div>
 
             <div className="space-y-4">
-              {canReviewerEditScores ? (
+              {user?.role === 'reviewer' ? (
                 <>
                   <div className="rounded-xl border border-ng-line bg-ng-blue-light p-3 text-sm text-ng-blue">
-                    You can only see your own scores.
+                    {canReviewerEditScores
+                      ? 'You can only see your own scores.'
+                      : `Scoring is disabled when candidate status is ${candidate.status}.`}
                   </div>
                   <ScoreForm
                     onSubmit={async (payload) => {
+                      if (!canReviewerEditScores) {
+                        return
+                      }
                       if (!editingScoreId) {
                         await handleCreateScore(payload)
                         return
@@ -262,7 +435,7 @@ export function CandidateDetailPage() {
                       await handleUpdateScore(editingScoreId, payload.score, payload.note)
                       setEditingScoreId(null)
                     }}
-                    disabled={candidate.status === 'archived'}
+                    disabled={!canReviewerEditScores}
                     mode={editingScoreId ? 'update' : 'create'}
                     initialValue={
                       editingScoreId
@@ -280,12 +453,34 @@ export function CandidateDetailPage() {
                 </>
               ) : null}
 
+              {isAdmin ? (
+                <section className="card p-4">
+                  <p className="mb-2 inline-flex rounded-full bg-ng-blue-light px-3 py-1 text-xs font-semibold text-ng-blue">Admin view</p>
+                  <p className="mb-1 text-sm font-semibold text-ng-ink">Candidate status</p>
+                  <select className="input" value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
+                    <option value="new">new</option>
+                    <option value="reviewed">reviewed</option>
+                    <option value="hired">hired</option>
+                    <option value="rejected">rejected</option>
+                    <option value="archived">archived</option>
+                  </select>
+                  <button type="button" className="btn-secondary mt-3 w-full" onClick={() => void handleSaveStatus()}>
+                    <span className="inline-flex items-center gap-2"><SaveIcon className="h-4 w-4" />Save status</span>
+                  </button>
+                </section>
+              ) : null}
+
               {isAdmin && isAdminDetail(candidate) ? (
-                <InternalNotesPanel
-                  value={notes ?? candidate.internal_notes}
-                  onSave={handleSaveNotes}
-                  onDelete={handleDeleteNotes}
-                />
+                <section className="card border-ng-red/30 p-4">
+                  <p className="mb-3 text-sm font-semibold text-ng-red">Internal notes (Admin only)</p>
+                  <InternalNotesPanel
+                    value={notes ?? candidate.internal_notes}
+                    onSave={handleSaveNotes}
+                    onDelete={handleDeleteNotes}
+                    compact
+                    canClear={Boolean((notes ?? candidate.internal_notes)?.trim())}
+                  />
+                </section>
               ) : null}
             </div>
           </div>

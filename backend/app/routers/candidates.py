@@ -50,7 +50,7 @@ def get_candidates(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CandidateListResponse:
     result = list_candidates(
         db=db,
@@ -60,6 +60,7 @@ def get_candidates(
         keyword=keyword,
         page=page,
         page_size=page_size,
+        viewer_role=current_user.role,
     )
     return CandidateListResponse(
         items=result.items,
@@ -79,6 +80,9 @@ def get_candidate_detail(
         candidate = get_candidate_or_404(db, candidate_id)
     except CandidateNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if current_user.role == UserRole.REVIEWER.value and candidate.status == "archived":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
     scores = get_candidate_scores_for_user(candidate, current_user)
     if current_user.role == UserRole.ADMIN.value:
@@ -217,6 +221,8 @@ async def generate_summary(
         summary = await generate_candidate_summary(db=db, candidate_id=candidate_id, actor=current_user)
     except CandidateNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PermissionDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     return AISummaryResponse(candidate_id=candidate_id, ai_summary=summary)
 

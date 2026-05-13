@@ -1,8 +1,24 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../context/ConfirmContext'
+import { LogoutIcon } from './Icons'
 
 export function Navbar() {
   const { user, logout } = useAuth()
+  const { confirm } = useConfirm()
+
+  async function handleLogout() {
+    const approved = await confirm({
+      title: 'Log out of your session?',
+      description: 'You will need to sign in again to continue reviewing candidates.',
+      confirmText: 'Logout',
+      tone: 'danger',
+    })
+    if (!approved) {
+      return
+    }
+    await logout()
+  }
 
   return (
     <header className="border-b border-ng-line bg-ng-white/95 backdrop-blur">
@@ -18,8 +34,12 @@ export function Navbar() {
             </p>
             <p className="text-xs text-ng-muted">{user?.role ?? 'guest'}</p>
           </div>
-          <button type="button" onClick={() => void logout()} className="btn-secondary inline-flex gap-2">
-            <span aria-hidden="true">↗</span>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="inline-flex items-center gap-2 rounded-lg border border-ng-red/30 bg-ng-red-light px-4 py-2 text-sm font-semibold text-ng-red transition hover:bg-ng-red-light/80"
+          >
+            <LogoutIcon className="h-4 w-4" />
             Logout
           </button>
         </div>

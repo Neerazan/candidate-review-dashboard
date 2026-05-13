@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ScoreCategory, ScoreCreatePayload } from '../types/score'
+import { ClearIcon, SaveIcon, SubmitIcon } from './Icons'
 
 interface ScoreFormProps {
   onSubmit: (payload: ScoreCreatePayload) => Promise<void>
@@ -50,7 +51,7 @@ export function ScoreForm({ onSubmit, disabled, initialValue, mode = 'create', o
       <div className="grid grid-cols-1 gap-3">
         <div>
           <label className="label">Category</label>
-          <select className="input" value={category} onChange={(e) => setCategory(e.target.value as ScoreCategory)}>
+          <select className="input" value={category} onChange={(e) => setCategory(e.target.value as ScoreCategory)} disabled={disabled || loading}>
             {categoryOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -73,6 +74,7 @@ export function ScoreForm({ onSubmit, disabled, initialValue, mode = 'create', o
                       : 'border-ng-line bg-ng-white text-ng-muted hover:bg-ng-surface'
                   }`}
                   onClick={() => setScore(value)}
+                  disabled={disabled || loading}
                 >
                   {value}
                 </button>
@@ -83,15 +85,27 @@ export function ScoreForm({ onSubmit, disabled, initialValue, mode = 'create', o
       </div>
       <div className="mt-3">
         <label className="label">Note</label>
-        <textarea className="input min-h-24" placeholder="Add observations..." value={note} onChange={(e) => setNote(e.target.value)} />
+        <textarea
+          className="input min-h-24"
+          placeholder="Add observations..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={disabled || loading}
+        />
       </div>
       <div className="mt-4 flex gap-2">
         <button type="submit" className="btn-primary w-full" disabled={disabled || loading}>
-          {loading ? 'Saving...' : mode === 'update' ? 'Update Score' : 'Submit Score'}
+          {loading ? (
+            'Saving...'
+          ) : mode === 'update' ? (
+            <span className="inline-flex items-center gap-2"><SaveIcon className="h-4 w-4" />Update Score</span>
+          ) : (
+            <span className="inline-flex items-center gap-2"><SubmitIcon className="h-4 w-4" />Submit Score</span>
+          )}
         </button>
         {mode === 'update' && onCancelEdit ? (
           <button type="button" className="btn-secondary" onClick={onCancelEdit} disabled={loading}>
-            Cancel
+            <span className="inline-flex items-center gap-2"><ClearIcon className="h-4 w-4" />Cancel</span>
           </button>
         ) : null}
       </div>

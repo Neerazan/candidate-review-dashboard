@@ -1,11 +1,13 @@
 import type { CandidateFilters as CandidateFiltersType } from '../types/candidate'
+import { ClearIcon } from './Icons'
 
 interface CandidateFiltersProps {
   value: CandidateFiltersType
   onChange: (next: CandidateFiltersType) => void
+  includeArchivedOption: boolean
 }
 
-export function CandidateFilters({ value, onChange }: CandidateFiltersProps) {
+export function CandidateFilters({ value, onChange, includeArchivedOption }: CandidateFiltersProps) {
   function update<K extends keyof CandidateFiltersType>(key: K, next: CandidateFiltersType[K]) {
     onChange({ ...value, [key]: next, page: 1 })
   }
@@ -25,7 +27,7 @@ export function CandidateFilters({ value, onChange }: CandidateFiltersProps) {
           <option value="reviewed">reviewed</option>
           <option value="hired">hired</option>
           <option value="rejected">rejected</option>
-          <option value="archived">archived</option>
+          {includeArchivedOption ? <option value="archived">archived</option> : null}
         </select>
         <input
           className="input"
@@ -42,11 +44,12 @@ export function CandidateFilters({ value, onChange }: CandidateFiltersProps) {
         <div>
           <button
             type="button"
-            className="btn-secondary w-full xl:w-auto"
+            className="btn-secondary w-full gap-2 xl:w-auto"
             onClick={() =>
               onChange({ status: '', role_applied: '', skill: '', keyword: '', page: 1, page_size: value.page_size })
             }
           >
+            <ClearIcon className="h-4 w-4" />
             Clear
           </button>
         </div>

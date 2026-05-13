@@ -52,6 +52,7 @@ def list_candidates(
     keyword: str | None,
     page: int,
     page_size: int,
+    viewer_role: str,
 ) -> CandidateListResult:
     offset = (page - 1) * page_size
 
@@ -61,6 +62,10 @@ def list_candidates(
     filters = []
     if status:
         filters.append(Candidate.status == status)
+    elif viewer_role == UserRole.REVIEWER.value:
+        filters.append(Candidate.status != "archived")
+    elif viewer_role == UserRole.ADMIN.value:
+        filters.append(Candidate.status != "archived")
     if role_applied:
         filters.append(Candidate.role_applied == role_applied)
     if skill:
@@ -243,6 +248,9 @@ def delete_internal_notes(*, db: Session, candidate_id: str, actor: User) -> Non
 
 async def generate_candidate_summary(*, db: Session, candidate_id: str, actor: User) -> str:
     candidate = get_candidate_or_404(db, candidate_id)
+    if actor.role == UserRole.REVIEWER.value and candidate.status in {"archived", "hired", "rejected"}:
+        raise PermissionDeniedError("Reviewers cannot generate summaries for archived, hired, or rejected candidates")
+
     visible_scores = get_candidate_scores_for_user(candidate, actor)
 
     await asyncio.sleep(2)
