@@ -147,3 +147,21 @@ class InternalNotesResponse(BaseModel):
 class CandidateDeleteResponse(BaseModel):
     candidate_id: str
     status: str
+
+
+AllowedCandidateStatus = Literal[
+    "new",
+    "reviewed",
+    "hired",
+    "rejected",
+    "archived",
+]
+
+
+class CandidateStatusUpdateRequest(BaseModel):
+    status: AllowedCandidateStatus
+
+
+class CandidateStatusResponse(BaseModel):
+    candidate_id: str
+    status: str

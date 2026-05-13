@@ -12,6 +12,8 @@ from app.schemas import (
     CandidateDetailAdminResponse,
     CandidateDetailResponse,
     CandidateListResponse,
+    CandidateStatusResponse,
+    CandidateStatusUpdateRequest,
     InternalNotesResponse,
     InternalNotesUpdateRequest,
     ScoreAdminResponse,
@@ -34,6 +36,7 @@ from app.services.candidate_service import (
     get_internal_notes,
     list_candidates,
     soft_delete_candidate,
+    update_candidate_status,
     update_internal_notes,
     update_score,
 )
@@ -295,3 +298,25 @@ def archive_candidate(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     return CandidateDeleteResponse(candidate_id=candidate.id, status=candidate.status)
+
+
+@router.patch("/{candidate_id}/status", response_model=CandidateStatusResponse)
+def patch_candidate_status(
+    candidate_id: str,
+    payload: CandidateStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CandidateStatusResponse:
+    try:
+        candidate = update_candidate_status(
+            db=db,
+            candidate_id=candidate_id,
+            actor=current_user,
+            status=payload.status,
+        )
+    except CandidateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PermissionDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    return CandidateStatusResponse(candidate_id=candidate.id, status=candidate.status)

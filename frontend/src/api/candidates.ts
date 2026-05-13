@@ -72,3 +72,13 @@ export function deleteInternalNotes(candidateId: string): Promise<InternalNotesR
 export function archiveCandidate(candidateId: string): Promise<{ candidate_id: string; status: string }> {
   return apiRequest(`/candidates/${candidateId}`, { method: 'DELETE' })
 }
+
+export function updateCandidateStatus(
+  candidateId: string,
+  status: 'new' | 'reviewed' | 'hired' | 'rejected' | 'archived',
+): Promise<{ candidate_id: string; status: string }> {
+  return apiRequest(`/candidates/${candidateId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}

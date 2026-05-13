@@ -211,6 +211,20 @@ def soft_delete_candidate(*, db: Session, candidate_id: str, actor: User) -> Can
     return candidate
 
 
+def update_candidate_status(*, db: Session, candidate_id: str, actor: User, status: str) -> Candidate:
+    if actor.role != UserRole.ADMIN.value:
+        raise PermissionDeniedError("Admin access required")
+
+    candidate = db.scalar(select(Candidate).where(Candidate.id == candidate_id))
+    if not candidate:
+        raise CandidateNotFoundError("Candidate not found")
+
+    candidate.status = status
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
 def get_internal_notes(*, db: Session, candidate_id: str, actor: User) -> str | None:
     if actor.role != UserRole.ADMIN.value:
         raise PermissionDeniedError("Admin access required")

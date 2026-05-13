@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  archiveCandidate,
-  createScore,
-  deleteInternalNotes,
-  deleteScore,
-  generateSummary,
-  getCandidate,
-  getInternalNotes,
-  updateInternalNotes,
-  updateScore,
+    archiveCandidate,
+    createScore,
+    deleteInternalNotes,
+    deleteScore,
+    generateSummary,
+    getCandidate,
+    getInternalNotes,
+    updateCandidateStatus,
+    updateInternalNotes,
+    updateScore,
 } from '../api/candidates'
 import { ErrorState } from '../components/ErrorState'
 import { Avatar } from '../components/Avatar'
@@ -161,11 +162,8 @@ export function CandidateDetailPage() {
       return
     }
 
-    if (statusDraft === 'archived') {
-      await handleArchiveCandidate(true)
-      return
-    }
-    setError('Status update is currently limited to archive only.')
+    await updateCandidateStatus(candidateId, statusDraft as 'new' | 'reviewed' | 'hired' | 'rejected' | 'archived')
+    await fetchCandidate()
   }
 
   function renderStars(score: number) {
