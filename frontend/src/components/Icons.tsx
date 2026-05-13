@@ -134,6 +134,16 @@ export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function ExternalLinkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M14 3h7v7" />
+      <path d="M10 14L21 3" />
+      <path d="M21 14v7H3V3h7" />
+    </BaseIcon>
+  )
+}
+
 export function AiIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <BaseIcon {...props}>

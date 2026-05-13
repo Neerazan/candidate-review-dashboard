@@ -21,7 +21,7 @@ import { Navbar } from '../components/Navbar'
 import { ScoreForm } from '../components/ScoreForm'
 import { StatusBadge } from '../components/StatusBadge'
 import { SummaryCard } from '../components/SummaryCard'
-import { ArchiveIcon, EditIcon, ListIcon, SaveIcon } from '../components/Icons'
+import { ArchiveIcon, EditIcon, ExternalLinkIcon, ListIcon, SaveIcon } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import type { CandidateDetail, CandidateDetailAdmin } from '../types/candidate'
@@ -274,6 +274,16 @@ export function CandidateDetailPage() {
                   <div className="md:pl-10">
                     <p className="text-sm font-semibold text-ng-ink">Applied</p>
                     <p className="text-sm text-ng-muted">{formatLongDate(candidate.created_at)}</p>
+                    {candidate.resume_url ? (
+                      <button
+                        type="button"
+                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-ng-blue hover:text-ng-blue-dark"
+                        onClick={() => window.open(candidate.resume_url ?? '', '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLinkIcon className="h-4 w-4" />
+                        Open Resume
+                      </button>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mt-4">

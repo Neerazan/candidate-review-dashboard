@@ -271,7 +271,9 @@ async def generate_candidate_summary(*, db: Session, candidate_id: str, actor: U
 
     if visible_scores:
         avg_score = sum(score.score for score in visible_scores) / len(visible_scores)
-        categories = ", ".join(sorted({score.category for score in visible_scores}))
+        categories = ", ".join(
+            sorted({_humanize_category(score.category) for score in visible_scores})
+        )
         score_line = f"Average score is {avg_score:.1f}/5 across: {categories}."
     else:
         score_line = "No scores available yet; evaluation is pending reviewer input."
@@ -286,3 +288,7 @@ async def generate_candidate_summary(*, db: Session, candidate_id: str, actor: U
     candidate.ai_summary = summary
     db.commit()
     return summary
+
+
+def _humanize_category(category: str) -> str:
+    return category.replace("_", " ").title()

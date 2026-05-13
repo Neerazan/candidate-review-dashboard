@@ -11,6 +11,8 @@ from app.database import Base, SessionLocal, engine
 from app.config import settings
 from app.models import Candidate, User, UserRole
 
+SEED_RESUME_URL = "https://docs.google.com/document/d/1Sey3iEn5gr5vKhpGfrNIO1Fv8oS6CSeJeVF06dCFucg/edit?usp=sharing"
+
 
 def seed_users(db: Session) -> None:
     users_to_seed = [
@@ -82,7 +84,7 @@ def seed_candidates(db: Session, total_candidates: int = 60) -> None:
                 status=statuses[(i - 1) % len(statuses)],
                 skills=skills_cycle[(i - 1) % len(skills_cycle)],
                 experience_summary=f"{2 + (i % 8)} years experience in software delivery.",
-                resume_url=f"https://example.com/resumes/candidate-{i:03d}.pdf",
+                resume_url=SEED_RESUME_URL,
                 internal_notes=None,
                 created_at=base_date + timedelta(days=i),
                 updated_at=base_date + timedelta(days=i),
