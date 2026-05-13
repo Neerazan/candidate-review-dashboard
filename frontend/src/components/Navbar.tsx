@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
@@ -39,6 +40,7 @@ export function Navbar() {
       return
     }
     await logout()
+    toast.success('Logged out successfully')
   }
 
   return (

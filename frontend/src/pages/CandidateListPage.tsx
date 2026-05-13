@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { CandidateFilters } from '../components/CandidateFilters'
 import { Button } from '../components/Button'
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons'
@@ -54,6 +55,7 @@ export function CandidateListPage() {
         })
       } catch {
         setStats({ total: 0, new: 0, reviewed: 0, hired: 0, rejected: 0 })
+        toast('Dashboard stats are unavailable right now.', { icon: 'ℹ️' })
       }
     })()
   }, [])
@@ -66,7 +68,9 @@ export function CandidateListPage() {
         const response = await listCandidates(filters)
         setData(response)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load candidates')
+        const message = err instanceof Error ? err.message : 'Failed to load candidates'
+        setError(message)
+        toast.error(message)
       } finally {
         setLoading(false)
       }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
@@ -17,6 +18,9 @@ export function LoginPage() {
   }
 
   useEffect(() => {
+    if (sessionExpired) {
+      toast('Your session expired. Please sign in again.', { icon: '⚠️' })
+    }
     return () => {
       if (sessionExpired) {
         clearSessionExpired()
@@ -30,9 +34,12 @@ export function LoginPage() {
     setError(null)
     try {
       await login(email, password)
+      toast.success('Welcome back!')
       navigate('/candidates')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }

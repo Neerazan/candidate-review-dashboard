@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { Link, Navigate } from 'react-router-dom'
 import { registerReviewer } from '../api/auth'
 import { Button } from '../components/Button'
@@ -28,11 +29,14 @@ export function AddStaffPage() {
     try {
       const created = await registerReviewer({ name, email, password })
       setSuccess(`Reviewer account created for ${created.email}`)
+      toast.success(`Reviewer created: ${created.email}`)
       setName('')
       setEmail('')
       setPassword('password123')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create staff reviewer')
+      const message = err instanceof Error ? err.message : 'Failed to create staff reviewer'
+      setError(message)
+      toast.error(message)
     } finally {
       setSaving(false)
     }

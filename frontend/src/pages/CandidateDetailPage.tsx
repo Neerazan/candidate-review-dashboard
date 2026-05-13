@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
     archiveCandidate,
@@ -114,7 +115,11 @@ export function CandidateDetailPage() {
         setNotes((previous) => (previous === detail.internal_notes ? previous : detail.internal_notes))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load candidate')
+      const message = err instanceof Error ? err.message : 'Failed to load candidate'
+      setError(message)
+      if (!silent) {
+        toast.error(message)
+      }
     } finally {
       if (!silent || !hasLoadedCandidateRef.current) {
         setLoading(false)
@@ -175,13 +180,23 @@ export function CandidateDetailPage() {
   }, [candidateId, isAdmin, fetchCandidate])
 
   async function handleCreateScore(payload: ScoreCreatePayload) {
-    await createScore(candidateId, payload)
-    await fetchCandidate()
+    try {
+      await createScore(candidateId, payload)
+      toast.success('Score submitted successfully')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit score')
+    }
   }
 
   async function handleUpdateScore(scoreId: string, nextScore: number, note: string | null) {
-    await updateScore(candidateId, scoreId, { score: nextScore, note })
-    await fetchCandidate()
+    try {
+      await updateScore(candidateId, scoreId, { score: nextScore, note })
+      toast.success('Score updated successfully')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update score')
+    }
   }
 
   async function handleDeleteScore(scoreId: string) {
@@ -195,24 +210,37 @@ export function CandidateDetailPage() {
       return
     }
 
-    await deleteScore(candidateId, scoreId)
-    await fetchCandidate()
+    try {
+      await deleteScore(candidateId, scoreId)
+      toast.success('Score deleted')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete score')
+    }
   }
 
   async function handleGenerateSummary() {
     setSummaryLoading(true)
     try {
       await generateSummary(candidateId)
+      toast.success('AI summary generated')
       await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate summary')
     } finally {
       setSummaryLoading(false)
     }
   }
 
   async function handleSaveNotes(next: string) {
-    const response = await updateInternalNotes(candidateId, next)
-    setNotes(response.internal_notes)
-    await fetchCandidate()
+    try {
+      const response = await updateInternalNotes(candidateId, next)
+      setNotes(response.internal_notes)
+      toast.success('Internal notes updated')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update internal notes')
+    }
   }
 
   async function handleDeleteNotes() {
@@ -225,9 +253,14 @@ export function CandidateDetailPage() {
     if (!approved) {
       return
     }
-    await deleteInternalNotes(candidateId)
-    setNotes(null)
-    await fetchCandidate()
+    try {
+      await deleteInternalNotes(candidateId)
+      setNotes(null)
+      toast.success('Internal notes cleared')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to clear internal notes')
+    }
   }
 
   async function handleArchiveCandidate(skipConfirm = false) {
@@ -242,8 +275,13 @@ export function CandidateDetailPage() {
         return
       }
     }
-    await archiveCandidate(candidateId)
-    await fetchCandidate()
+    try {
+      await archiveCandidate(candidateId)
+      toast.success('Candidate archived')
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to archive candidate')
+    }
   }
 
   async function handleSaveStatus() {
@@ -263,8 +301,13 @@ export function CandidateDetailPage() {
       return
     }
 
-    await updateCandidateStatus(candidateId, statusDraft as 'new' | 'reviewed' | 'hired' | 'rejected' | 'archived')
-    await fetchCandidate()
+    try {
+      await updateCandidateStatus(candidateId, statusDraft as 'new' | 'reviewed' | 'hired' | 'rejected' | 'archived')
+      toast.success(`Candidate status updated to ${statusDraft}`)
+      await fetchCandidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update status')
+    }
   }
 
   function renderStars(score: number) {
