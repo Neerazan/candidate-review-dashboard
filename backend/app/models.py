@@ -158,3 +158,24 @@ class Score(Base, UUIDMixin, TimestampMixin):
         ),
         Index("idx_scores_candidate_id", "candidate_id"),
     )
+
+
+class RefreshToken(Base, UUIDMixin):
+    __tablename__ = "refresh_tokens"
+
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+    jti: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped["User"] = relationship()

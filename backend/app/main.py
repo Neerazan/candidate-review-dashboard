@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers.auth import router as auth_router
 from app.seed import seed_database
 
 
@@ -10,6 +11,7 @@ from app.seed import seed_database
 async def lifespan(_: FastAPI):
     seed_database()
     yield
+
 
 app = FastAPI(title="Candidate Review API", lifespan=lifespan)
 
@@ -20,6 +22,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
 
 
 @app.get("/health")

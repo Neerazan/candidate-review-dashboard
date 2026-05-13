@@ -3,19 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import hash_password
 from app.database import Base, SessionLocal, engine
 from app.config import settings
 from app.models import Candidate, User
-
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
 
 
 def seed_users(db: Session) -> None:
