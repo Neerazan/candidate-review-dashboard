@@ -22,24 +22,28 @@ def seed_users(db: Session) -> None:
             "email": "admin@techkraft.local",
             "password": "password123",
             "role": UserRole.ADMIN.value,
+            "force_password_change": False,
         },
         {
             "name": "Primary Reviewer",
             "email": "reviewer@techkraft.local",
             "password": "password123",
             "role": UserRole.REVIEWER.value,
+            "force_password_change": True,
         },
         {
             "name": "Second Reviewer",
             "email": "reviewer2@techkraft.local",
             "password": "password123",
             "role": UserRole.REVIEWER.value,
+            "force_password_change": True,
         },
     ]
 
     for seed_user in users_to_seed:
         existing_user = db.scalar(select(User).where(User.email == seed_user["email"]))
         if existing_user:
+            existing_user.force_password_change = seed_user["force_password_change"]
             continue
 
         db.add(
@@ -48,6 +52,7 @@ def seed_users(db: Session) -> None:
                 email=seed_user["email"],
                 hashed_password=hash_password(seed_user["password"]),
                 role=seed_user["role"],
+                force_password_change=seed_user["force_password_change"],
             )
         )
 
@@ -110,6 +115,8 @@ def seed_database() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1"))
             if "deleted_at" not in user_columns:
                 conn.execute(text("ALTER TABLE users ADD COLUMN deleted_at DATETIME"))
+            if "force_password_change" not in user_columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN force_password_change BOOLEAN NOT NULL DEFAULT 0"))
 
             score_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(scores)"))}
             if "deleted_at" not in score_columns:

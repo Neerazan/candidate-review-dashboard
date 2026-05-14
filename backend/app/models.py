@@ -77,6 +77,8 @@ class User(Base, UUIDMixin, TimestampMixin):
 
     active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
+    force_password_change: Mapped[bool] = mapped_column(default=False, nullable=False)
+
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     scores: Mapped[list["Score"]] = relationship(back_populates="reviewer")

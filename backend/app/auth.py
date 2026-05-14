@@ -98,7 +98,11 @@ def get_access_token(
     )
 
 
-def get_current_user(token: str = Depends(get_access_token), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    request: Request,
+    token: str = Depends(get_access_token),
+    db: Session = Depends(get_db),
+) -> User:
     auth_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -117,4 +121,6 @@ def get_current_user(token: str = Depends(get_access_token), db: Session = Depen
         raise auth_error
     if user.deleted_at is not None or not user.active:
         raise auth_error
+    if user.force_password_change and request.url.path not in {"/auth/me", "/auth/change-password", "/auth/logout"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password change required")
     return user

@@ -72,6 +72,7 @@ def register_reviewer(*, db: Session, actor: User, name: str, email: str, passwo
         email=email,
         hashed_password=hash_password(password),
         role=UserRole.REVIEWER.value,
+        force_password_change=True,
     )
     db.add(user)
     db.commit()
@@ -154,6 +155,7 @@ def change_password(*, db: Session, user: User, current_password: str, new_passw
     if not verify_password(current_password, user.hashed_password):
         raise PasswordMismatchError("Current password is incorrect")
     user.hashed_password = hash_password(new_password)
+    user.force_password_change = False
     db.commit()
 
 

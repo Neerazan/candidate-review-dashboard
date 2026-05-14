@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string
   role: UserRole
   active: boolean
+  force_password_change: boolean
   deleted_at: string | null
   created_at: string
   updated_at: string

@@ -45,6 +45,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     active: bool
+    force_password_change: bool
     deleted_at: datetime | None
     created_at: datetime
     updated_at: datetime

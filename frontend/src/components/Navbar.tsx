@@ -54,47 +54,54 @@ export function Navbar() {
             <p className="text-sm font-semibold text-ng-ink">{user?.name ?? 'Unknown User'}</p>
             <p className="text-xs text-ng-muted">{user?.role ?? 'guest'}</p>
           </div>
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-ng-line bg-ng-white px-2 py-1.5 hover:bg-ng-surface"
-              onClick={() => setMenuOpen((prev) => !prev)}
-            >
-              <Avatar name={user?.name ?? 'Unknown User'} size="sm" />
-              <ChevronDownIcon className="h-4 w-4 text-ng-muted" />
-            </button>
+          {user?.force_password_change ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+              <KeyIcon className="h-4 w-4" />
+              Password Update Required
+            </div>
+          ) : (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-ng-line bg-ng-white px-2 py-1.5 hover:bg-ng-surface"
+                onClick={() => setMenuOpen((prev) => !prev)}
+              >
+                <Avatar name={user?.name ?? 'Unknown User'} size="sm" />
+                <ChevronDownIcon className="h-4 w-4 text-ng-muted" />
+              </button>
 
-            {menuOpen ? (
-              <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-ng-line bg-ng-white p-1 shadow-xl">
-                <Link
-                  to="/account/password"
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-amber-700 hover:bg-amber-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <KeyIcon className="h-4 w-4" />
-                  Change Password
-                </Link>
-                {user?.role === 'admin' ? (
+              {menuOpen ? (
+                <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-ng-line bg-ng-white p-1 shadow-xl">
                   <Link
-                    to="/staff/new"
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-ng-blue hover:bg-ng-blue-light"
+                    to="/account/password"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-amber-700 hover:bg-amber-50"
                     onClick={() => setMenuOpen(false)}
                   >
-                    <StaffIcon className="h-4 w-4" />
-                    Manage Staff
+                    <KeyIcon className="h-4 w-4" />
+                    Change Password
                   </Link>
-                ) : null}
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ng-red hover:bg-ng-surface"
-                  onClick={() => void handleLogout()}
-                >
-                  <LogoutIcon className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
-            ) : null}
-          </div>
+                  {user?.role === 'admin' ? (
+                    <Link
+                      to="/staff/new"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-ng-blue hover:bg-ng-blue-light"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <StaffIcon className="h-4 w-4" />
+                      Manage Staff
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ng-red hover:bg-ng-surface"
+                    onClick={() => void handleLogout()}
+                  >
+                    <LogoutIcon className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </header>
