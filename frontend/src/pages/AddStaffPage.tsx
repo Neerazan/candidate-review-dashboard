@@ -6,6 +6,7 @@ import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
 import { Navbar } from '../components/Navbar'
 import { ArchiveIcon, ClearIcon, SaveIcon, StaffIcon, UnarchiveIcon } from '../components/Icons'
+import { LoadingState } from '../components/LoadingState'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import type { StaffUser } from '../types/auth'
@@ -168,7 +169,16 @@ export function AddStaffPage() {
           <h2 className="text-lg font-bold text-ng-ink">Reviewer Accounts</h2>
           <p className="mb-3 mt-1 text-sm text-ng-muted">Archive disables login. Delete performs soft delete and hides reviews.</p>
           {loadingStaff ? (
-            <p className="text-sm text-ng-muted">Loading staff list...</p>
+            <div className="space-y-2">
+              <LoadingState label="Loading reviewer accounts..." variant="inline" />
+              <div className="card p-3">
+                <div className="space-y-2">
+                  {[0, 1, 2, 3].map((row) => (
+                    <div key={row} className="h-10 animate-pulse rounded-md bg-ng-line/60" />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

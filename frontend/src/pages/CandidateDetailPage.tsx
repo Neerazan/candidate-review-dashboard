@@ -138,10 +138,10 @@ export function CandidateDetailPage() {
   }, [fetchCandidate])
 
   useEffect(() => {
-    if (candidate && candidate.status !== statusDraft) {
+    if (candidate) {
       setStatusDraft(candidate.status)
     }
-  }, [candidate, statusDraft])
+  }, [candidate?.status])
 
   useEffect(() => {
     if (!candidateId) {

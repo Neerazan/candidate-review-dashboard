@@ -44,7 +44,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="border-b border-ng-line bg-ng-white/95 backdrop-blur">
+    <header className="relative z-50 border-b border-ng-line bg-ng-white/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6">
         <Link to="/candidates" className="text-lg font-extrabold tracking-tight text-ng-ink">
           Candidate Review Dashboard

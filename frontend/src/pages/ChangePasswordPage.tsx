@@ -4,17 +4,29 @@ import { Link, Navigate } from 'react-router-dom'
 import { changePassword } from '../api/auth'
 import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { Navbar } from '../components/Navbar'
 import { SaveIcon } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 
 export function ChangePasswordPage() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <Navbar />
+        <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 md:px-6">
+          <LoadingState label="Loading account settings..." variant="inline" />
+        </main>
+      </div>
+    )
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />
