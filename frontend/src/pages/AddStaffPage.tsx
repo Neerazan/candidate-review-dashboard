@@ -4,11 +4,11 @@ import { Link, Navigate } from 'react-router-dom'
 import { archiveStaff, deleteStaff, listStaff, registerReviewer, unarchiveStaff } from '../api/auth'
 import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
-import { Navbar } from '../components/Navbar'
 import { ArchiveIcon, ClearIcon, SaveIcon, StaffIcon, UnarchiveIcon } from '../components/Icons'
 import { LoadingState } from '../components/LoadingState'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
+import { useApiAction } from '../hooks/useApiAction'
 import type { StaffUser } from '../types/auth'
 import { formatLongDate } from '../utils/date'
 
@@ -23,6 +23,7 @@ export function AddStaffPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [staff, setStaff] = useState<StaffUser[]>([])
   const [loadingStaff, setLoadingStaff] = useState(true)
+  const { runAction } = useApiAction()
 
   if (user?.role !== 'admin') {
     return <Navigate to="/candidates" replace />
@@ -50,17 +51,20 @@ export function AddStaffPage() {
     setError(null)
     setSuccess(null)
     try {
-      const created = await registerReviewer({ name, email, password })
+      const created = await runAction({
+        action: () => registerReviewer({ name, email, password }),
+        successMessage: `Reviewer created: ${email}`,
+        errorMessage: 'Failed to create staff reviewer',
+        onError: setError,
+      })
+      if (!created) {
+        return
+      }
       setSuccess(`Reviewer account created for ${created.email}`)
-      toast.success(`Reviewer created: ${created.email}`)
       setName('')
       setEmail('')
       setPassword('password123')
       await fetchStaff()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create staff reviewer'
-      setError(message)
-      toast.error(message)
     } finally {
       setSaving(false)
     }
@@ -76,13 +80,12 @@ export function AddStaffPage() {
     if (!approved) {
       return
     }
-    try {
-      await archiveStaff(staffItem.id)
-      toast.success(`Archived ${staffItem.name}`)
-      await fetchStaff()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to archive staff')
-    }
+    await runAction({
+      action: () => archiveStaff(staffItem.id),
+      successMessage: `Archived ${staffItem.name}`,
+      errorMessage: 'Failed to archive staff',
+      onSuccess: fetchStaff,
+    })
   }
 
   async function handleDelete(staffItem: StaffUser) {
@@ -95,13 +98,12 @@ export function AddStaffPage() {
     if (!approved) {
       return
     }
-    try {
-      await deleteStaff(staffItem.id)
-      toast.success(`Deleted ${staffItem.name}`)
-      await fetchStaff()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete staff')
-    }
+    await runAction({
+      action: () => deleteStaff(staffItem.id),
+      successMessage: `Deleted ${staffItem.name}`,
+      errorMessage: 'Failed to delete staff',
+      onSuccess: fetchStaff,
+    })
   }
 
   async function handleUnarchive(staffItem: StaffUser) {
@@ -114,19 +116,16 @@ export function AddStaffPage() {
       return
     }
 
-    try {
-      await unarchiveStaff(staffItem.id)
-      toast.success(`Unarchived ${staffItem.name}`)
-      await fetchStaff()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to unarchive staff')
-    }
+    await runAction({
+      action: () => unarchiveStaff(staffItem.id),
+      successMessage: `Unarchived ${staffItem.name}`,
+      errorMessage: 'Failed to unarchive staff',
+      onSuccess: fetchStaff,
+    })
   }
 
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 md:px-6">
+    <main className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <Link to="/candidates" className="text-sm font-semibold text-ng-blue hover:text-ng-blue-dark">
             ← Back to Candidates
@@ -249,7 +248,6 @@ export function AddStaffPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+    </main>
   )
 }

@@ -1,3 +1,5 @@
+import { emitSessionExpired } from '../utils/authEvents'
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 interface RequestOptions extends RequestInit {
@@ -5,10 +7,6 @@ interface RequestOptions extends RequestInit {
 }
 
 let refreshPromise: Promise<boolean> | null = null
-
-function notifySessionExpired(): void {
-  window.dispatchEvent(new Event('auth:session-expired'))
-}
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
   const url = new URL(path, API_BASE_URL)
@@ -70,7 +68,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       if (refreshed) {
         return requestWithRetry(false)
       }
-      notifySessionExpired()
+      emitSessionExpired()
     }
 
     return response

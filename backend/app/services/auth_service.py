@@ -160,7 +160,16 @@ def change_password(*, db: Session, user: User, current_password: str, new_passw
 
 
 def list_staff(*, db: Session) -> list[User]:
-    return list(db.scalars(select(User).where(User.role == UserRole.REVIEWER.value).order_by(User.created_at.desc())).all())
+    return list(
+        db.scalars(
+            select(User)
+            .where(
+                User.role == UserRole.REVIEWER.value,
+                User.deleted_at.is_(None),
+            )
+            .order_by(User.created_at.desc())
+        ).all()
+    )
 
 
 def archive_staff(*, db: Session, actor: User, staff_id: str) -> User:

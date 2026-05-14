@@ -5,7 +5,6 @@ import { changePassword } from '../api/auth'
 import { Button } from '../components/Button'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
-import { Navbar } from '../components/Navbar'
 import { SaveIcon } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 
@@ -20,12 +19,9 @@ export function ChangePasswordPage() {
 
   if (loading) {
     return (
-      <div className="app-shell">
-        <Navbar />
-        <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 md:px-6">
-          <LoadingState label="Loading account settings..." variant="inline" />
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 md:px-6">
+        <LoadingState label="Loading account settings..." variant="inline" />
+      </main>
     )
   }
 
@@ -62,9 +58,7 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 md:px-6">
+    <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 md:px-6">
         <div className="flex items-center justify-between gap-3">
           {!user.force_password_change ? (
             <Link to="/candidates" className="text-sm font-semibold text-ng-blue hover:text-ng-blue-dark">
@@ -117,7 +111,6 @@ export function ChangePasswordPage() {
             </Button>
           </form>
         </section>
-      </main>
-    </div>
+    </main>
   )
 }

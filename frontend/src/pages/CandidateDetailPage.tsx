@@ -19,7 +19,6 @@ import { Avatar } from '../components/Avatar'
 import { Button } from '../components/Button'
 import { InternalNotesPanel } from '../components/InternalNotesPanel'
 import { LoadingState } from '../components/LoadingState'
-import { Navbar } from '../components/Navbar'
 import { ScoreForm } from '../components/ScoreForm'
 import { StatusBadge } from '../components/StatusBadge'
 import { SummaryCard } from '../components/SummaryCard'
@@ -367,9 +366,7 @@ export function CandidateDetailPage() {
   }, [candidate, isAdmin])
 
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 md:px-6">
+    <main className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <Link to="/candidates" className="text-sm font-semibold text-ng-blue hover:text-ng-blue-dark">
             ← Back to Candidates
@@ -643,7 +640,6 @@ export function CandidateDetailPage() {
             </div>
           </div>
         ) : null}
-      </main>
-    </div>
+    </main>
   )
 }

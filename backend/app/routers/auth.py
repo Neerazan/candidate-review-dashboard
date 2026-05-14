@@ -7,6 +7,7 @@ from app.auth import (
     ACCESS_COOKIE_NAME,
     REFRESH_COOKIE_NAME,
     get_current_user,
+    require_admin,
 )
 from app.config import settings
 from app.database import get_db
@@ -22,13 +23,6 @@ from app.schemas import (
     UserResponse,
 )
 from app.services.auth_service import (
-    InactiveAccountError,
-    EmailAlreadyRegisteredError,
-    ForbiddenActionError,
-    InvalidCredentialsError,
-    PasswordMismatchError,
-    RefreshTokenError,
-    UserNotFoundError,
     archive_staff,
     change_password,
     login as login_service,
@@ -73,34 +67,20 @@ def clear_auth_cookies(response: Response) -> None:
 def register(
     payload: RegisterRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> User:
-    try:
-        return register_reviewer(
-            db=db,
-            actor=current_user,
-            name=payload.name,
-            email=payload.email,
-            password=payload.password,
-        )
-    except ForbiddenActionError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except EmailAlreadyRegisteredError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return register_reviewer(
+        db=db,
+        actor=current_user,
+        name=payload.name,
+        email=payload.email,
+        password=payload.password,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
-    try:
-        session = login_service(db=db, email=payload.email, password=payload.password)
-    except InvalidCredentialsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
-    except InactiveAccountError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    session = login_service(db=db, email=payload.email, password=payload.password)
 
     set_auth_cookies(response, session.access_token, session.refresh_token)
     return TokenResponse(access_token=session.access_token)
@@ -112,10 +92,7 @@ def refresh_access_token(request: Request, response: Response, db: Session = Dep
     if not refresh_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
 
-    try:
-        session = refresh_session(db=db, refresh_token=refresh_token)
-    except RefreshTokenError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    session = refresh_session(db=db, refresh_token=refresh_token)
 
     set_auth_cookies(response, session.access_token, session.refresh_token)
     return TokenResponse(access_token=session.access_token)
@@ -142,25 +119,20 @@ def change_user_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> MessageResponse:
-    try:
-        change_password(
-            db=db,
-            user=current_user,
-            current_password=payload.current_password,
-            new_password=payload.new_password,
-        )
-    except PasswordMismatchError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    change_password(
+        db=db,
+        user=current_user,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
     return MessageResponse(message="Password updated successfully")
 
 
 @router.get("/staff", response_model=StaffListResponse)
 def get_staff(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> StaffListResponse:
-    if current_user.role != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return StaffListResponse(items=[StaffResponse.model_validate(staff) for staff in list_staff(db=db)])
 
 
@@ -168,14 +140,9 @@ def get_staff(
 def patch_staff_archive(
     staff_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> StaffResponse:
-    try:
-        staff = archive_staff(db=db, actor=current_user, staff_id=staff_id)
-    except ForbiddenActionError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except UserNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    staff = archive_staff(db=db, actor=current_user, staff_id=staff_id)
     return StaffResponse.model_validate(staff)
 
 
@@ -183,14 +150,9 @@ def patch_staff_archive(
 def patch_staff_unarchive(
     staff_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> StaffResponse:
-    try:
-        staff = unarchive_staff(db=db, actor=current_user, staff_id=staff_id)
-    except ForbiddenActionError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except UserNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    staff = unarchive_staff(db=db, actor=current_user, staff_id=staff_id)
     return StaffResponse.model_validate(staff)
 
 
@@ -198,12 +160,7 @@ def patch_staff_unarchive(
 def delete_staff(
     staff_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> StaffResponse:
-    try:
-        staff = soft_delete_staff(db=db, actor=current_user, staff_id=staff_id)
-    except ForbiddenActionError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except UserNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    staff = soft_delete_staff(db=db, actor=current_user, staff_id=staff_id)
     return StaffResponse.model_validate(staff)

@@ -99,7 +99,6 @@ def get_access_token(
 
 
 def get_current_user(
-    request: Request,
     token: str = Depends(get_access_token),
     db: Session = Depends(get_db),
 ) -> User:
@@ -121,6 +120,22 @@ def get_current_user(
         raise auth_error
     if user.deleted_at is not None or not user.active:
         raise auth_error
-    if user.force_password_change and request.url.path not in {"/auth/me", "/auth/change-password", "/auth/logout"}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password change required")
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
+
+
+def require_reviewer(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "reviewer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Reviewer access required")
+    return current_user
+
+
+def require_password_updated(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.force_password_change:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password change required")
+    return current_user

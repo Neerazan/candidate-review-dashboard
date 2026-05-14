@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { getMe, login as loginRequest, logout as logoutRequest } from '../api/auth'
 import type { AuthUser } from '../types/auth'
+import { onSessionExpired } from '../utils/authEvents'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -41,10 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSessionExpired(true)
     }
 
-    window.addEventListener('auth:session-expired', handleSessionExpired)
-    return () => {
-      window.removeEventListener('auth:session-expired', handleSessionExpired)
-    }
+    return onSessionExpired(handleSessionExpired)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {

@@ -7,7 +7,6 @@ import { ClearIcon, HiredIcon, ReviewIcon, SubmitIcon, ViewIcon } from '../compo
 import { CandidateTable } from '../components/CandidateTable'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
-import { Navbar } from '../components/Navbar'
 import { listCandidates } from '../api/candidates'
 import { useAuth } from '../context/AuthContext'
 import type { CandidateFilters as CandidateFiltersType, CandidateListResponse } from '../types/candidate'
@@ -78,9 +77,7 @@ export function CandidateListPage() {
   }, [filters])
 
   return (
-    <div className="app-shell">
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 md:px-6">
+    <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 md:px-6">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h1 className="text-3xl font-extrabold">Candidates</h1>
@@ -166,7 +163,6 @@ export function CandidateListPage() {
             </div>
           </div>
         ) : null}
-      </main>
-    </div>
+    </main>
   )
 }
