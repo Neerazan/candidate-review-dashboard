@@ -21,6 +21,10 @@ export function listCandidates(filters: CandidateFilters): Promise<CandidateList
   })
 }
 
+export function getCandidateStats(): Promise<{ total: number; new: number; reviewed: number; hired: number; rejected: number }> {
+  return apiRequest('/candidates/stats')
+}
+
 export function getCandidate(candidateId: string): Promise<CandidateDetail | CandidateDetailAdmin> {
   return apiRequest(`/candidates/${candidateId}`)
 }

@@ -392,8 +392,9 @@ export function CandidateDetailPage() {
                       <p className="mt-2 text-sm text-ng-muted">Role: {candidate.role_applied}</p>
                       <p className="mt-2 text-xs font-medium text-ng-muted">
                         Live updates:{' '}
-                        <span className={liveStatus === 'connected' ? 'text-ng-blue' : 'text-ng-muted'}>
+                        <span className={`inline-flex items-center gap-1.5 ${liveStatus === 'connected' ? 'text-emerald-700' : 'text-ng-muted'}`}>
                           {liveStatus}
+                          {liveStatus === 'connected' ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> : null}
                         </span>
                       </p>
                     </div>

@@ -18,7 +18,7 @@ export function CandidateFilters({ value, onChange, includeArchivedOption }: Can
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
         <input
           className="input xl:col-span-2"
-          placeholder="Search by name, email, role"
+          placeholder="Search by name or email"
           value={value.keyword}
           onChange={(e) => update('keyword', e.target.value)}
         />

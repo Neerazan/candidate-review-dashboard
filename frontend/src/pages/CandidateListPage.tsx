@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { CandidateFilters } from '../components/CandidateFilters'
 import { Button } from '../components/Button'
@@ -7,7 +7,7 @@ import { ClearIcon, HiredIcon, ReviewIcon, SubmitIcon, ViewIcon } from '../compo
 import { CandidateTable } from '../components/CandidateTable'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
-import { listCandidates } from '../api/candidates'
+import { getCandidateStats, listCandidates } from '../api/candidates'
 import { useAuth } from '../context/AuthContext'
 import type { CandidateFilters as CandidateFiltersType, CandidateListResponse } from '../types/candidate'
 
@@ -23,11 +23,13 @@ const defaultFilters: CandidateFiltersType = {
 export function CandidateListPage() {
   const { user } = useAuth()
   const [filters, setFilters] = useState(defaultFilters)
+  const [effectiveFilters, setEffectiveFilters] = useState(defaultFilters)
   const [data, setData] = useState<CandidateListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({ total: 0, new: 0, reviewed: 0, hired: 0, rejected: 0 })
   const includeArchivedOption = user?.role === 'admin'
+  const previousFiltersRef = useRef(defaultFilters)
 
   useEffect(() => {
     if (!includeArchivedOption && filters.status === 'archived') {
@@ -38,20 +40,8 @@ export function CandidateListPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [total, newItems, reviewed, hired, rejected] = await Promise.all([
-          listCandidates({ ...defaultFilters, page_size: 1 }),
-          listCandidates({ ...defaultFilters, status: 'new', page_size: 1 }),
-          listCandidates({ ...defaultFilters, status: 'reviewed', page_size: 1 }),
-          listCandidates({ ...defaultFilters, status: 'hired', page_size: 1 }),
-          listCandidates({ ...defaultFilters, status: 'rejected', page_size: 1 }),
-        ])
-        setStats({
-          total: total.total,
-          new: newItems.total,
-          reviewed: reviewed.total,
-          hired: hired.total,
-          rejected: rejected.total,
-        })
+        const response = await getCandidateStats()
+        setStats(response)
       } catch {
         setStats({ total: 0, new: 0, reviewed: 0, hired: 0, rejected: 0 })
         toast('Dashboard stats are unavailable right now.', { icon: 'ℹ️' })
@@ -60,11 +50,34 @@ export function CandidateListPage() {
   }, [])
 
   useEffect(() => {
+    const previous = previousFiltersRef.current
+    const textFieldsChanged =
+      previous.keyword !== filters.keyword ||
+      previous.role_applied !== filters.role_applied ||
+      previous.skill !== filters.skill
+
+    previousFiltersRef.current = filters
+
+    if (!textFieldsChanged) {
+      setEffectiveFilters(filters)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setEffectiveFilters(filters)
+    }, 350)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [filters])
+
+  useEffect(() => {
     void (async () => {
       setLoading(true)
       setError(null)
       try {
-        const response = await listCandidates(filters)
+        const response = await listCandidates(effectiveFilters)
         setData(response)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load candidates'
@@ -74,7 +87,7 @@ export function CandidateListPage() {
         setLoading(false)
       }
     })()
-  }, [filters])
+  }, [effectiveFilters])
 
   return (
     <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 md:px-6">

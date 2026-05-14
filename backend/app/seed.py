@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password
@@ -65,7 +64,7 @@ def seed_candidates(db: Session, total_candidates: int = 60) -> None:
         "Data Engineer",
         "DevOps Engineer",
     ]
-    statuses = ["new", "reviewed", "hired", "rejected", "archived"]
+    statuses = ["new", "rejected", "archived"]
     skills_cycle = [
         ["Python", "FastAPI", "SQL"],
         ["TypeScript", "React", "CSS"],
@@ -106,21 +105,8 @@ def seed_database() -> None:
             db_file = Path.cwd() / db_file
         db_file.parent.mkdir(parents=True, exist_ok=True)
 
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-
-    with engine.begin() as conn:
-        if settings.DATABASE_URL.startswith("sqlite"):
-            user_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
-            if "active" not in user_columns:
-                conn.execute(text("ALTER TABLE users ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1"))
-            if "deleted_at" not in user_columns:
-                conn.execute(text("ALTER TABLE users ADD COLUMN deleted_at DATETIME"))
-            if "force_password_change" not in user_columns:
-                conn.execute(text("ALTER TABLE users ADD COLUMN force_password_change BOOLEAN NOT NULL DEFAULT 0"))
-
-            score_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(scores)"))}
-            if "deleted_at" not in score_columns:
-                conn.execute(text("ALTER TABLE scores ADD COLUMN deleted_at DATETIME"))
 
     with SessionLocal() as db:
         seed_users(db)

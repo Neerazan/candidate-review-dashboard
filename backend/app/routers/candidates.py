@@ -15,6 +15,7 @@ from app.schemas import (
     CandidateDetailAdminResponse,
     CandidateDetailResponse,
     CandidateListResponse,
+    CandidateStatsResponse,
     CandidateStatusResponse,
     CandidateStatusUpdateRequest,
     InternalNotesResponse,
@@ -30,6 +31,7 @@ from app.services.candidate_service import (
     delete_score,
     delete_internal_notes,
     generate_candidate_summary,
+    get_candidate_stats,
     get_candidate_or_404,
     get_candidate_scores_for_user,
     get_internal_notes,
@@ -110,6 +112,21 @@ def get_candidates(
         total=result.total,
         page=result.page,
         page_size=result.page_size,
+    )
+
+
+@router.get("/stats", response_model=CandidateStatsResponse)
+def get_candidates_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_password_updated),
+) -> CandidateStatsResponse:
+    stats = get_candidate_stats(db=db, viewer_role=current_user.role)
+    return CandidateStatsResponse(
+        total=stats.total,
+        new=stats.new,
+        reviewed=stats.reviewed,
+        hired=stats.hired,
+        rejected=stats.rejected,
     )
 
 

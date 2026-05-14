@@ -135,6 +135,14 @@ class CandidateListResponse(BaseModel):
     page_size: int
 
 
+class CandidateStatsResponse(BaseModel):
+    total: int
+    new: int
+    reviewed: int
+    hired: int
+    rejected: int
+
+
 class CandidateDetailBase(BaseModel, Generic[ScoreType]):
     id: str
     name: str

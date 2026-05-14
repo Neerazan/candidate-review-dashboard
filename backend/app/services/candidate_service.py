@@ -44,6 +44,15 @@ class CandidateListResult:
     page_size: int
 
 
+@dataclass
+class CandidateStatsResult:
+    total: int
+    new: int
+    reviewed: int
+    hired: int
+    rejected: int
+
+
 def list_candidates(
     *,
     db: Session,
@@ -68,7 +77,7 @@ def list_candidates(
     elif viewer_role == UserRole.ADMIN.value:
         filters.append(Candidate.status != "archived")
     if role_applied:
-        filters.append(Candidate.role_applied == role_applied)
+        filters.append(Candidate.role_applied.ilike(f"%{role_applied}%"))
     if skill:
         filters.append(cast(Candidate.skills, String).ilike(f"%{skill}%"))
     if keyword:
@@ -77,7 +86,6 @@ def list_candidates(
             or_(
                 Candidate.name.ilike(kw),
                 Candidate.email.ilike(kw),
-                Candidate.role_applied.ilike(kw),
             )
         )
 
@@ -103,6 +111,26 @@ def list_candidates(
         for c in candidates
     ]
     return CandidateListResult(items=items, total=total, page=page, page_size=page_size)
+
+
+def get_candidate_stats(*, db: Session, viewer_role: str) -> CandidateStatsResult:
+    query = select(Candidate.status, func.count()).group_by(Candidate.status)
+
+    if viewer_role == UserRole.REVIEWER.value:
+        query = query.where(Candidate.status != "archived")
+    elif viewer_role == UserRole.ADMIN.value:
+        query = query.where(Candidate.status != "archived")
+
+    grouped_rows = db.execute(query).all()
+    counts = {status: total for status, total in grouped_rows}
+
+    return CandidateStatsResult(
+        total=sum(counts.values()),
+        new=counts.get("new", 0),
+        reviewed=counts.get("reviewed", 0),
+        hired=counts.get("hired", 0),
+        rejected=counts.get("rejected", 0),
+    )
 
 
 def get_candidate_or_404(db: Session, candidate_id: str) -> Candidate:
