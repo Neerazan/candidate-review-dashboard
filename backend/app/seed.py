@@ -105,7 +105,6 @@ def seed_database() -> None:
             db_file = Path.cwd() / db_file
         db_file.parent.mkdir(parents=True, exist_ok=True)
 
-    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     with SessionLocal() as db:
